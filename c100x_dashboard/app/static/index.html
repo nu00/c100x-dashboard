@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C100X Dashboard — Editor</title>
+<link rel="stylesheet" href="style.css?v=0.8.0">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <span>C100X&nbsp;<strong>Dashboard</strong></span>
+    <span class="screen-spec">800 × 480</span>
+  </div>
+  <div class="layout-controls">
+    <input id="layoutName" type="text" data-i18n-ph="ph_layout_name" maxlength="40" autocomplete="off">
+    <button id="btnSave" class="primary" data-i18n="save">Salva</button>
+    <select id="layoutList"><option value="" data-i18n="load_layout">— carica layout —</option></select>
+    <button id="btnDelete" class="danger" data-i18n-title="t_delete_loaded" data-i18n="delete">Elimina</button>
+    <button id="btnNew" data-i18n="new">Nuovo</button>
+    <button id="btnSetActive" data-i18n-title="t_set_active" data-i18n="set_active">Imposta attiva</button>
+    <input id="showDur" type="number" min="0" max="600" value="0" data-i18n-title="t_duration" style="width:64px">
+    <button id="btnShow" class="accent" data-i18n-title="t_show_now" data-i18n="show_now">Mostra ora</button>
+    <button id="btnCito" data-i18n-title="t_intercom" data-i18n="intercom">Citofono</button>
+    <select id="langSel" title="Language"><option value="it">IT</option><option value="en">EN</option></select>
+  </div>
+</header>
+
+<main class="workspace">
+  <aside class="palette">
+    <h2 data-i18n="add">Aggiungi</h2>
+    <button data-add="text" data-i18n="el_text">Testo</button>
+    <button data-add="entity" data-i18n="el_entity">Valore sensore</button>
+    <button data-add="image" data-i18n="el_image">Immagine</button>
+    <button data-add="icon" data-i18n="el_icon">Icona</button>
+    <button data-add="rect" data-i18n="el_rect">Rettangolo</button>
+    <button data-add="circle" data-i18n="el_circle">Cerchio</button>
+    <button data-add="triangle" data-i18n="el_triangle">Triangolo</button>
+    <button data-add="line" data-i18n="el_line">Linea</button>
+    <button data-add="arrow" data-i18n="el_arrow">Freccia</button>
+
+    <h2 data-i18n="background">Sfondo</h2>
+    <label class="row"><span data-i18n="color">Colore</span>
+      <input id="bgColor" type="color" value="#000000">
+    </label>
+
+    <h2 data-i18n="grid">Griglia</h2>
+    <label class="row checkbox">
+      <input id="snap" type="checkbox"> <span data-i18n="snap">Aggancia (10px)</span>
+    </label>
+
+    <p class="hint" data-i18n="palette_hint">Trascina per spostare. Maniglia in basso a destra per ridimensionare. Canc per eliminare.</p>
+  </aside>
+
+  <section class="stage-area" id="stageArea">
+    <div class="stage-wrap" id="stageWrap">
+      <div class="screen" id="screen" tabindex="0"></div>
+    </div>
+    <div class="stage-foot"><span id="statusMsg">Pronto.</span></div>
+  </section>
+
+  <aside class="props" id="props">
+    <h2 data-i18n="properties">Proprietà</h2>
+    <div id="propsBody"><p class="hint" data-i18n="select_element">Seleziona un elemento sulla tela.</p></div>
+  </aside>
+</main>
+
+<div id="citoModal" class="modal" hidden>
+  <div class="modal-box">
+    <h2 data-i18n="m_title">Citofono — installazione via SSH</h2>
+    <p class="hint" data-i18n="m_hint">Carica la pagina sul citofono, applica la patch e riavvia. Richiede SSH attivo sul citofono. Viene salvato un backup di main.qml.</p>
+    <div class="field"><label data-i18n="m_host">Host / IP del citofono</label><input id="cf_host" type="text" placeholder="192.168.1.50" autocomplete="off"></div>
+    <div class="field inline">
+      <div class="field"><label data-i18n="m_port">Porta</label><input id="cf_port" type="number" value="22"></div>
+      <div class="field"><label data-i18n="m_user">Utente</label><input id="cf_user" type="text" value="root" autocomplete="off"></div>
+    </div>
+    <div class="field"><label data-i18n="m_pass">Password</label><input id="cf_pass" type="password" autocomplete="off"></div>
+    <div class="toggle-row"><label><input id="cf_save" type="checkbox"> <span data-i18n="m_savepass">Salva la password nell'add-on</span></label></div>
+    <div class="field"><label data-i18n="m_base">URL dell'add-on (come lo vede il citofono)</label><input id="cf_base" type="text" placeholder="http://IP_HA:8099" autocomplete="off"></div>
+    <details>
+      <summary data-i18n="m_advanced">Avanzate</summary>
+      <div class="field"><label data-i18n="m_nodepath">Percorso di node sul citofono</label><input id="cf_node" type="text" value="/home/bticino/cfg/extra/node/bin/node"></div>
+      <div class="toggle-row"><label><input id="cf_reboot" type="checkbox" checked> <span data-i18n="m_reboot">Riavvia il citofono al termine</span></label></div>
+    </details>
+    <div class="modal-actions">
+      <button id="cf_savebtn" data-i18n="m_savebtn">Salva impostazioni</button>
+      <button id="cf_install" class="accent" data-i18n="m_install">Installa / aggiorna sul citofono</button>
+      <button id="cf_close" data-i18n="m_close">Chiudi</button>
+    </div>
+    <pre id="cf_log" class="cf-log" hidden></pre>
+  </div>
+</div>
+
+<script src="editor.js?v=0.8.0"></script>
+</body>
+</html>

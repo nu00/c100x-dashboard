@@ -1,0 +1,12 @@
+{
+  "name": "c100x-dashboard",
+  "version": "0.8.0",
+  "private": true,
+  "description": "Server/editor schermate per il citofono BTicino C100X",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.19.2",
+    "@mdi/svg": "^7.4.47",
+    "ssh2": "^1.15.0"
+  }
+}

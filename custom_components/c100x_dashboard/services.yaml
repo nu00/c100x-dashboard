@@ -1,0 +1,37 @@
+show:
+  name: Show card
+  description: Show a saved card on the intercom display.
+  fields:
+    name:
+      name: Card name
+      description: Name of the saved card. If omitted, the currently active one is used.
+      required: false
+      example: consumi
+      selector:
+        text:
+    duration:
+      name: Duration (s)
+      description: How many seconds to keep it on screen. 0 = stays until changed/hidden.
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 600
+          unit_of_measurement: s
+          mode: box
+
+hide:
+  name: Hide card
+  description: Hide the card currently shown on the intercom.
+
+set_active:
+  name: Set active card
+  description: Choose the active card without showing it now.
+  fields:
+    name:
+      name: Card name
+      required: true
+      example: consumi
+      selector:
+        text:

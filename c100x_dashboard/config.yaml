@@ -1,0 +1,38 @@
+# Manifest dell'add-on (letto da Home Assistant / Supervisor).
+# Documentazione: https://developers.home-assistant.io/docs/add-ons/configuration
+
+name: "C100X Dashboard"
+version: "0.8.0"
+slug: "c100x_dashboard"
+description: "Editor e server delle schermate per il display del citofono BTicino C100X"
+url: "https://github.com/nu00/c100x-dashboard"
+
+arch:
+  - amd64
+  - aarch64
+  - armv7
+  - armhf
+  - i386
+
+init: false
+startup: services
+boot: manual
+
+# Interfaccia integrata nella barra laterale di HA (autenticata)
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:monitor-dashboard
+panel_title: "C100X Dashboard"
+
+# Porta esposta: il citofono interroga direttamente questa (l'ingress e' solo per il browser)
+ports:
+  8099/tcp: 8099
+ports_description:
+  8099/tcp: "API/editor (il citofono interroga questa porta)"
+
+# Accesso alle API di Home Assistant (lettura entita')
+homeassistant_api: true
+
+# Accesso in sola lettura alla config di HA, per leggere la cartella www (immagini gia' presenti)
+map:
+  - homeassistant_config:ro

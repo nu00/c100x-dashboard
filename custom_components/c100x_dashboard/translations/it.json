@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "C100X Dashboard",
+        "description": "URL dell'add-on, come lo raggiunge Home Assistant (es. http://192.168.1.10:8099).",
+        "data": { "url": "URL dell'add-on" }
+      }
+    },
+    "error": { "cannot_connect": "Impossibile raggiungere l'add-on a quell'URL." },
+    "abort": { "already_configured": "Add-on già configurato." }
+  }
+}

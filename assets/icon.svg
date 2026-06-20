@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4A93C"/>
+      <stop offset="1" stop-color="#E07E22"/>
+    </linearGradient>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F2A93B" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#F2A93B" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+
+  <!-- sfondo squircle ambra -->
+  <rect x="0" y="0" width="512" height="512" rx="120" fill="url(#bg)"/>
+
+  <!-- ombra del dispositivo -->
+  <rect x="108" y="80" width="296" height="372" rx="46" fill="#000000" opacity="0.16"/>
+
+  <!-- dispositivo (citofono) bianco -->
+  <rect x="108" y="70" width="296" height="372" rx="46" fill="#F5F2EB" stroke="#E2DBCD" stroke-width="2"/>
+
+  <!-- camera -->
+  <circle cx="256" cy="92" r="6" fill="#2B313D"/>
+  <circle cx="254" cy="90" r="2" fill="#FFFFFF" opacity="0.55"/>
+
+  <!-- schermo -->
+  <rect x="148" y="110" width="216" height="150" rx="18" fill="#0E141D"/>
+  <rect x="148" y="110" width="216" height="150" rx="18" fill="none" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+
+  <!-- indicatore "live" -->
+  <circle cx="174" cy="130" r="7" fill="#39C0A8"/>
+  <!-- finte etichette UI -->
+  <rect x="300" y="125" width="44" height="7" rx="3.5" fill="#FFFFFF" opacity="0.25"/>
+  <rect x="312" y="139" width="32" height="6" rx="3" fill="#FFFFFF" opacity="0.15"/>
+
+  <!-- grafico (dashboard live) -->
+  <path d="M164,246 L164,226 L201,210 L238,220 L275,184 L312,194 L348,158 L348,246 Z" fill="url(#area)"/>
+  <line x1="164" y1="246" x2="348" y2="246" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/>
+  <polyline points="164,226 201,210 238,220 275,184 312,194 348,158"
+            fill="none" stroke="#F2A93B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="348" cy="158" r="8" fill="#F2A93B"/>
+  <circle cx="348" cy="158" r="3.2" fill="#0E141D"/>
+
+  <!-- pulsanti del citofono -->
+  <circle cx="210" cy="316" r="9" fill="#CBD0DA"/>
+  <circle cx="256" cy="316" r="9" fill="#CBD0DA"/>
+  <circle cx="302" cy="316" r="9" fill="#CBD0DA"/>
+  <!-- griglia altoparlante -->
+  <rect x="206" y="356" width="100" height="6" rx="3" fill="#E4DFD4"/>
+  <rect x="222" y="372" width="68" height="6" rx="3" fill="#E9E5DC"/>
+</svg>

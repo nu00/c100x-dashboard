@@ -1,0 +1,15 @@
+# Dipendenze e runtime
+node_modules/
+data/
+*.log
+
+# Backup creati sul citofono
+*.bak
+*.bak.*
+main.qml.ORIGINALE
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
