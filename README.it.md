@@ -46,7 +46,7 @@ nasconderla a comando (utile per "mostra durante un blackout, nascondi quando to
 ## Prerequisiti
 
 - Un BTicino **Classe 100X** con accesso SSH e il controller della community
-  (ecosistema fquinto / slyoldfox `c300x-controller`) — cioè un'unità sbloccata/QtQuick2.
+  ([fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) / [slyoldfox/c300x-controller](https://github.com/slyoldfox/c300x-controller)).
 - **Home Assistant** con Supervisor (Home Assistant OS o Supervised), necessario per gli add-on.
 - Citofono e HA sulla stessa LAN; il citofono deve raggiungere HA via **HTTP**.
 - Node.js presente sul citofono (incluso nel setup del controller) per la patch QML.
@@ -132,6 +132,14 @@ rest_command:
 - Sono supportate solo le icone MDI (set incluso in HA); i pacchetti icone custom non vengono serviti.
 - La password SSH, se salvata, è memorizzata in chiaro in `/data` dell'add-on e non viene mai
   restituita al browser.
+
+## Crediti
+
+Questo progetto si appoggia al lavoro di reverse engineering fatto prima dalla community dei citofoni BTicino:
+
+- [slyoldfox/c300x-controller](https://github.com/slyoldfox/c300x-controller) — il controller che gira sul citofono e su cui questo progetto si basa (runtime Node, endpoint HTTP, ponte verso Home Assistant).
+- [slyoldfox/c300x-dashboard](https://github.com/slyoldfox/c300x-dashboard) — l'ispirazione: una dashboard QML alimentata dal controller, pensata per il C300X (Qt 4.8.7 / QtQuick 1.x). Dato che dichiara *"Bticino c100x devices are untested"* e usa una generazione Qt/QtQuick diversa, il renderer di questo progetto è stato riscritto da zero per il C100X (Qt5 / QtQuick 2.x).
+- [fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) — il firmware modificato che rende possibile l'accesso root/SSH.
 
 ## Licenza
 

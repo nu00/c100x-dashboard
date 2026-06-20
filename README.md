@@ -46,7 +46,7 @@ command (handy for "show during a blackout, hide when power is back").
 ## Requirements
 
 - A BTicino **Classe 100X** with SSH access and the community controller
-  (fquinto / slyoldfox `c300x-controller` ecosystem) — i.e. a rooted/QtQuick2 unit.
+  ([fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) / [slyoldfox/c300x-controller](https://github.com/slyoldfox/c300x-controller)).
 - **Home Assistant** with the Supervisor (Home Assistant OS or Supervised), needed to run add-ons.
 - The intercom and HA on the same LAN; the intercom must be able to reach HA over **HTTP**.
 - Node.js present on the intercom (it ships with the controller setup) for the QML patch step.
@@ -145,6 +145,14 @@ rest_command:
 - Only MDI icons are supported (HA's built-in set); custom icon packs aren't served to the intercom.
 - The SSH password, if saved, is stored in the add-on's `/data` in clear text and never returned
   to the browser.
+
+## Credits
+
+This project stands on the shoulders of prior reverse-engineering work by the BTicino intercom community:
+
+- [slyoldfox/c300x-controller](https://github.com/slyoldfox/c300x-controller) — the on-device controller this project relies on (Node runtime, HTTP endpoints, Home Assistant bridge).
+- [slyoldfox/c300x-dashboard](https://github.com/slyoldfox/c300x-dashboard) — the inspiration: a controller-fed QML dashboard for the C300X (Qt 4.8.7 / QtQuick 1.x). Since it states *"Bticino c100x devices are untested"* and targets a different Qt/QtQuick generation, the renderer here was written from scratch for the C100X (Qt5 / QtQuick 2.x).
+- [fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) — the modified firmware that makes root/SSH access possible.
 
 ## License
 
