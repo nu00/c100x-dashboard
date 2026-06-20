@@ -64,8 +64,6 @@ command (handy for "show during a blackout, hide when power is back").
 **As an add-on repository (one click for others):** push this repo to GitHub, then in HA add the
 repo URL under Store → ⋮ → *Repositories*. The add-on installs from there.
 
-> Local add-ons don't "update" — after changing files use the add-on's ⋮ → **Rebuild**.
-
 ## Use the editor
 
 1. Add elements from the palette (text, sensor value, image, icon, shapes, line, arrow).
