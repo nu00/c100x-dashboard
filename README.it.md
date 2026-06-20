@@ -85,12 +85,22 @@ dell'add-on come lo vede il citofono** (es. `http://192.168.1.10:8099`), poi
 
 Preferisci l'installazione manuale? Vedi `c100x_dashboard/citofono/README.md`.
 
+## Installare l'integrazione (opzionale)
+
+L'integrazione è **separata dall'add-on** e **non viene installata in automatico** — l'add-on non
+può scrivere nella cartella `custom_components/` di HA. Ti serve solo se vuoi i comodi servizi
+`show` / `hide` / `set_active` nelle automazioni; senza, puoi comunque comandare l'add-on via REST
+(vedi sotto).
+
+1. Copia `custom_components/c100x_dashboard/` nella cartella `config/custom_components/` di HA
+   (oppure aggiungi questa repo a HACS come *integration*).
+2. Riavvia Home Assistant.
+3. Impostazioni → Dispositivi e servizi → **Aggiungi integrazione → C100X Dashboard** e indica
+   l'URL dell'add-on (es. `http://192.168.1.10:8099`).
+
 ## Richiamare le schede da Home Assistant
 
-**Con l'integrazione (consigliato).** Copia `custom_components/c100x_dashboard/` nella cartella
-`config/custom_components/` di HA (oppure aggiungi questa repo a HACS come *integration*), riavvia
-HA, poi Impostazioni → Dispositivi e servizi → **Aggiungi integrazione → C100X Dashboard** e indica
-l'URL dell'add-on. Ottieni queste azioni:
+**Con l'integrazione.** Una volta installata (vedi sopra), ottieni queste azioni:
 
 ```yaml
 # Mostra una schermata per nome, resta finché non la nascondi

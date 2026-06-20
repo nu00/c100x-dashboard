@@ -85,12 +85,22 @@ and reboots. A checkbox lets you store the SSH password in the add-on or be aske
 
 Prefer manual install? See `c100x_dashboard/citofono/README.md`.
 
+## Install the integration (optional)
+
+The integration is **separate from the add-on** and is **not installed automatically** — the
+add-on can't write into HA's `custom_components/`. You only need it if you want the convenient
+`show` / `hide` / `set_active` services in your automations; without it you can still drive the
+add-on over REST (see below).
+
+1. Copy `custom_components/c100x_dashboard/` into your HA `config/custom_components/`
+   (or add this repo to HACS as a custom *integration*).
+2. Restart Home Assistant.
+3. Settings → Devices & Services → **Add integration → C100X Dashboard**, and enter the add-on URL
+   (e.g. `http://192.168.1.10:8099`).
+
 ## Trigger screens from Home Assistant
 
-**With the integration (recommended).** Copy `custom_components/c100x_dashboard/` into your HA
-`config/custom_components/` (or add this repo to HACS as a custom *integration*), restart HA, then
-Settings → Devices & Services → **Add integration → C100X Dashboard**, and enter the add-on URL.
-You then get these actions:
+**With the integration.** Once installed (see above), you get these actions:
 
 ```yaml
 # Show a named screen, keep it until hidden
