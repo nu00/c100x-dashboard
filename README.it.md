@@ -64,8 +64,6 @@ nasconderla a comando (utile per "mostra durante un blackout, nascondi quando to
 **Come add-on repository (un clic per altri):** pubblica questa repo su GitHub, poi in HA aggiungi
 l'URL della repo in Store → ⋮ → *Repositories*.
 
-> Gli add-on locali non si "aggiornano": dopo aver cambiato i file usa ⋮ → **Rebuild**.
-
 ## Usare l'editor
 
 1. Aggiungi gli elementi dalla palette (testo, valore sensore, immagine, icona, forme, linea, freccia).
