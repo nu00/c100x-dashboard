@@ -186,8 +186,13 @@ FocusScope {
         onTriggered: root.back()
     }
 
-    // Qualsiasi tasto chiude
-    Keys.onReturnPressed: root.back()
-    Keys.onUpPressed: root.back()
-    Keys.onDownPressed: root.back()
+    // La pagina deve avere il focus tastiera per ricevere i tasti hardware
+    // (rotella laterale, frecce, conferma). Senza focus attivo, premere la
+    // rotella non chiudeva la scheda quando non c'era un timeout.
+    focus: true
+    Component.onCompleted: root.forceActiveFocus()
+    onVisibleChanged: if (visible) root.forceActiveFocus()
+
+    // Qualsiasi tasto/pulsante chiude la scheda
+    Keys.onPressed: { root.back(); event.accepted = true }
 }

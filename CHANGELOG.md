@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1
+
+Correzioni lato citofono e base per l'aggiornamento del renderer.
+
+- Citofono: la scheda ora si chiude con **qualsiasi tasto o pulsante** (inclusa la rotella laterale) anche senza timeout impostato. Prima, senza timeout, la rotella non la nascondeva perche' la pagina non aveva il focus tastiera.
+- Base per l'**aggiornamento del renderer**: il citofono comunica all'add-on la versione di `SchedaPage` installata (`/active?rv=`), e l'add-on espone `/api/citofono/status` per sapere se e' allineata. La notifica in Home Assistant e la Update entity arriveranno in una prossima versione.
+- **Nota**: questa versione cambia il renderer lato citofono. Dopo aver aggiornato l'add-on, reinstalla la pagina con **Citofono → Installa/aggiorna**.
+
 ## 0.9.0
 
 Editor potenziato.

@@ -15,7 +15,10 @@ const path = require("path");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.9.0";
+const VERSION = "0.9.1";
+// Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
+// Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
+const RENDERER_VERSION = "1";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -219,8 +222,16 @@ app.post("/api/hide", async (req, res) => {
 
 // --- Endpoint per il citofono ---
 let lastPoll = 0;
+let lastRv = "";
+let lastRvSeen = 0;
+const RV_FILE = path.join(DATA, "renderer.json");
+try { const j = JSON.parse(fs.readFileSync(RV_FILE, "utf8")); lastRv = j.rv || ""; lastRvSeen = j.seen || 0; } catch (_) {}
+function persistRv() { try { fs.writeFileSync(RV_FILE, JSON.stringify({ rv: lastRv, seen: lastRvSeen })); } catch (_) {} }
 app.get("/active", async (req, res) => {
     lastPoll = Date.now();
+    const rvq = (req.query.rv || "").toString();
+    lastRvSeen = lastPoll;
+    if (rvq !== lastRv) { lastRv = rvq; persistRv(); }
     try {
         const a = await readActive();
         const base = { name: a.name || null, background: "#000000", elements: [], showSeq: a.showSeq || 0, hideSeq: a.hideSeq || 0, duration: a.duration || 0 };
@@ -246,6 +257,23 @@ app.get("/api/citofono/live", async (req, res) => {
         lastSeen: lastPoll || null,
         activeName: a.name || null,
         showing: (a.showSeq || 0) > (a.hideSeq || 0)
+    });
+});
+
+app.get("/api/citofono/status", async (req, res) => {
+    const c = await readCfg();
+    const online = (Date.now() - lastPoll) < 6000;
+    let state, stale;
+    if (!online) { state = "offline"; stale = false; }
+    else if (!lastRv) { state = "legacy"; stale = true; }
+    else if (lastRv !== RENDERER_VERSION) { state = "outdated"; stale = true; }
+    else { state = "current"; stale = false; }
+    res.json({
+        shipped: RENDERER_VERSION,
+        deployed: lastRv || null,
+        online, state, stale,
+        lastSeen: lastPoll || null,
+        canInstall: !!SSHClient && !!c.password && !!c.host
     });
 });
 
@@ -351,7 +379,7 @@ app.post("/api/citofono/install", async (req, res) => {
             "mount -oremount,rw /",
             "cp /home/bticino/cfg/extra/SchedaPage.qml /home/bticino/bin/gui/skins/default/SchedaPage.qml",
             "[ -f /home/bticino/cfg/extra/main.qml.bak.prescheda ] || cp /home/bticino/bin/gui/skins/default/main.qml /home/bticino/cfg/extra/main.qml.bak.prescheda",
-            nodePath + " /home/bticino/cfg/extra/patch-scheda-qml.js /home/bticino/bin/gui/skins/default/main.qml '" + addonBase + "'",
+            nodePath + " /home/bticino/cfg/extra/patch-scheda-qml.js /home/bticino/bin/gui/skins/default/main.qml '" + addonBase + "' '" + RENDERER_VERSION + "'",
             "mount -oremount,ro /",
             "echo DONE_SCHEDE"
         ].join(" && ");
