@@ -1,5 +1,7 @@
 <p align="center"><img src="assets/icon-256.png" width="150" alt="C100X Dashboard"></p>
 
+_Changelog: [c100x_dashboard/CHANGELOG.md](c100x_dashboard/CHANGELOG.md)_
+
 # C100X Dashboard
 
 > The integration ships its own icon in `custom_components/c100x_dashboard/brand/` (Home Assistant 2026.3+).
