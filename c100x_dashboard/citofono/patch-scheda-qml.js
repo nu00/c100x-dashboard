@@ -2,7 +2,7 @@
 /*
  * patch-scheda-qml.js — inietta/aggiorna in main.qml il watcher che mostra le "schede".
  *
- * Uso:  node patch-scheda-qml.js /percorso/main.qml http://IP_HA:8099
+ * Uso:  node patch-scheda-qml.js /percorso/main.qml http://IP_HA:8099 [rendererVersion]
  *
  * Il watcher interroga <addonBase>/active ogni secondo:
  *  - aggiorna schedaData (valori live);
@@ -21,6 +21,7 @@ const END = "// ===== END C100X-HA-SCHEDE =====";
 
 const path = process.argv[2];
 const addonBase = (process.argv[3] || "http://IP_HA:8099").replace(/\/+$/, "");
+const rendererVersion = (process.argv[4] || "").trim();
 if (!path) { console.error("Uso: node patch-scheda-qml.js /percorso/main.qml http://IP_HA:8099"); process.exit(1); }
 
 const BLOCK = `
@@ -42,6 +43,7 @@ const BLOCK = `
         running: true
         repeat: true
         property string addonBase: "${addonBase}"
+        property string rendererVersion: "${rendererVersion}"
         property var schedaData: ({ background: "#000000", elements: [] })
         property int duration: 0
         property real showSeq: 0
@@ -79,7 +81,9 @@ const BLOCK = `
                     } catch (e) {}
                 }
             }
-            xhr.open("GET", schedaWatcher.addonBase + "/active");
+            var url = schedaWatcher.addonBase + "/active";
+            if (schedaWatcher.rendererVersion) url += "?rv=" + schedaWatcher.rendererVersion;
+            xhr.open("GET", url);
             xhr.send();
         }
     }

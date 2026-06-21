@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.2
+
+Ripristino della navigazione del citofono.
+
+- Annullata la modifica della 0.9.1 che, forzando il focus tastiera sulla scheda e "accettando" tutti i tasti, rompeva la navigazione delle pagine stock del citofono (la rotella non apriva piu' i menu). La gestione dei tasti torna identica alla 0.8.0.
+- Mantenuti i miglioramenti visivi introdotti nelle 0.8.x (font Roboto, icone nitide).
+- Il renderer e' cambiato: dopo aver aggiornato l'add-on, **reinstalla** la pagina con Citofono -> Installa/aggiorna.
+- Nota: la chiusura della scheda con il pulsante a rotella verra' agganciata correttamente piu' avanti, sulla base del `main.qml` del dispositivo.
+
 ## 0.9.1
 
 Correzioni lato citofono e base per l'aggiornamento del renderer.

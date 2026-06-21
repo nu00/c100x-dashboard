@@ -64,6 +64,8 @@ nasconderla a comando (utile per "mostra durante un blackout, nascondi quando to
 **Come add-on repository (un clic per altri):** pubblica questa repo su GitHub, poi in HA aggiungi
 l'URL della repo in Store → ⋮ → *Repositories*.
 
+> Per distribuire le modifiche, aumenta `version:` in `config.yaml`: Home Assistant propone allora un **Aggiorna** per l'add-on (Impostazioni → Add-on → Store → ⋮ → **Controlla aggiornamenti**). Il ⋮ → **Rebuild** dell'add-on serve solo a forzare una ricostruzione senza cambio di versione.
+
 ## Usare l'editor
 
 1. Aggiungi gli elementi dalla palette (testo, valore sensore, immagine, icona, forme, linea, freccia).

@@ -64,6 +64,8 @@ command (handy for "show during a blackout, hide when power is back").
 **As an add-on repository (one click for others):** push this repo to GitHub, then in HA add the
 repo URL under Store → ⋮ → *Repositories*. The add-on installs from there.
 
+> To ship changes, bump `version:` in `config.yaml`: Home Assistant then offers an **Update** for the add-on (Settings → Add-ons → Store → ⋮ → **Check for updates**). The add-on's ⋮ → **Rebuild** is only needed to force a fresh build without a version change.
+
 ## Use the editor
 
 1. Add elements from the palette (text, sensor value, image, icon, shapes, line, arrow).
