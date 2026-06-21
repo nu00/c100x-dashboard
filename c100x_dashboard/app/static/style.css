@@ -269,3 +269,8 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .ta-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ta-ico { width: 20px; height: 20px; flex: 0 0 auto; object-fit: contain; background: rgba(255,255,255,.05); border-radius: 4px; padding: 1px; }
 .ta-item:hover .ta-ico, .ta-item.active .ta-ico { background: rgba(0,0,0,.15); }
+
+/* brand logo come SVG inline (0.9.0 fix) */
+.brand-logo { display: inline-flex; width: 22px; height: 22px; border-radius: 5px; overflow: hidden; flex: 0 0 auto; }
+.brand-logo.lg { width: 44px; height: 44px; }
+.brand-logo svg { width: 100%; height: 100%; display: block; }

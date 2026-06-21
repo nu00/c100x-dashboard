@@ -627,6 +627,7 @@ document.querySelectorAll("button[data-add]").forEach(b => {
 bgColor.addEventListener("input", () => { layout.background = bgColor.value; screenEl.style.background = bgColor.value; });
 
 async function refreshLayoutList() {
+  if (!layoutList) return;
   try {
     const data = await (await fetch("api/layouts")).json();
     const cur = layoutList.value;
@@ -641,30 +642,33 @@ document.getElementById("btnSave").addEventListener("click", async () => {
   if (!/^[A-Za-z0-9 _-]{1,40}$/.test(name)) { setStatus(t("name_invalid")); return; }
   const body = { name, background: layout.background, elements: layout.elements.map(stripPreview) };
   const r = await fetch("api/layouts/" + encodeURIComponent(name), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (r.ok) { layout.name = name; setStatus(t("saved", name)); refreshLayoutList(); } else setStatus(t("save_error"));
+  if (r.ok) { layout.name = name; savedSnapshot = serializeLayout(); setStatus(t("saved", name)); refreshLayoutList(); } else setStatus(t("save_error"));
 });
 async function loadLayoutByName(name) {
+  if (isDirty() && !confirm(t("confirm_load"))) return false;
   const r = await fetch("api/layouts/" + encodeURIComponent(name));
-  if (!r.ok) { setStatus(t("load_error")); return; }
+  if (!r.ok) { setStatus(t("load_error")); return false; }
   layout = await r.json();
   if (!layout.elements) layout.elements = [];
   if (!layout.background) layout.background = "#000000";
-  layoutNameInput.value = layout.name || name; layoutList.value = name;
+  layoutNameInput.value = layout.name || name; if (layoutList) layoutList.value = name;
   selectedIds.clear(); selectedId = null; render(); renderProps(); setStatus(t("loaded", name));
+  savedSnapshot = serializeLayout(); return true;
 }
-layoutList.addEventListener("change", () => { const name = layoutList.value; if (name) loadLayoutByName(name); });
+if (layoutList) layoutList.addEventListener("change", () => { const name = layoutList.value; if (name) loadLayoutByName(name); });
 document.getElementById("btnDelete").addEventListener("click", async () => {
   const name = layoutNameInput.value.trim(); if (!name) return;
   if (!confirm(t("confirm_delete", name))) return;
   await fetch("api/layouts/" + encodeURIComponent(name), { method: "DELETE" });
   setStatus(t("layout_deleted", name)); refreshLayoutList();
 });
-function doNew(force) {
-  if (!force && layout.elements.length && !confirm(t("confirm_new"))) return;
+function doNew() {
+  if (isDirty() && !confirm(t("confirm_new"))) return false;
   layout = newLayout(); selectedIds.clear(); selectedId = null;
-  layoutNameInput.value = ""; layoutList.value = ""; render(); renderProps(); setStatus(t("new_layout"));
+  layoutNameInput.value = ""; if (layoutList) layoutList.value = ""; render(); renderProps(); setStatus(t("new_layout"));
+  savedSnapshot = serializeLayout(); return true;
 }
-document.getElementById("btnNew").addEventListener("click", () => doNew(false));
+document.getElementById("btnNew").addEventListener("click", () => doNew());
 document.getElementById("btnSetActive").addEventListener("click", async () => {
   const name = layoutNameInput.value.trim();
   if (!name) { setStatus(t("ask_save_first")); return; }
@@ -735,7 +739,14 @@ document.getElementById("cf_install").addEventListener("click", async () => {
 /* selettore lingua */
 const langSel = document.getElementById("langSel");
 langSel.value = LANG;
-langSel.addEventListener("change", () => { localStorage.setItem("cs_lang", langSel.value); location.reload(); });
+langSel.addEventListener("change", () => {
+  if (isDirty() && !confirm(t("confirm_lang"))) { langSel.value = LANG; return; }
+  localStorage.setItem("cs_lang", langSel.value);
+  sessionStorage.setItem("cs_skipHome", "1");
+  if (layout.name) sessionStorage.setItem("cs_openLayout", layout.name); else sessionStorage.removeItem("cs_openLayout");
+  window.__navigating = true;
+  location.reload();
+});
 
 /* avvio */
 async function loadEntities() {
@@ -745,11 +756,13 @@ async function loadEntities() {
 function boot() {
   applyStaticI18n();
   injectIcons(document);
+  injectBrand(document);
   hardenInputs(document);
   wireHome();
   fitScale(); render(); renderProps(); refreshLayoutList(); loadEntities(); setStatus(t("ready"));
   startCitoStatus();
-  showHome();
+  savedSnapshot = serializeLayout();
+  startupView();
 }
 
 
@@ -839,7 +852,7 @@ async function showHome() {
   grid.innerHTML = "";
   const nw = document.createElement("div"); nw.className = "home-new";
   nw.innerHTML = `<span class="plus">+</span><span>${t("home_new")}</span>`;
-  nw.addEventListener("click", () => { doNew(true); hideHome(); });
+  nw.addEventListener("click", () => { if (doNew()) hideHome(); });
   grid.appendChild(nw);
   if (!names.length) { const p = document.createElement("p"); p.className = "home-empty"; p.textContent = t("home_empty"); grid.appendChild(p); return; }
   for (const name of names) {
@@ -853,7 +866,7 @@ async function showHome() {
       showHome(); refreshLayoutList();
     });
     card.appendChild(del);
-    card.addEventListener("click", () => { loadLayoutByName(name); hideHome(); });
+    card.addEventListener("click", async () => { if (await loadLayoutByName(name)) hideHome(); });
     grid.appendChild(card);
     buildThumb(tw, name);
   }
@@ -884,5 +897,106 @@ async function pollCito() {
   } catch { pill.className = "cito-status off"; if (txt) txt.textContent = ""; }
 }
 
-/* avvio (dopo che tutte le definizioni sono pronte) */
+
+/* ===================== fix 0.9.0 (pre-release) ===================== */
+Object.assign(I18N.it, {
+  confirm_load: "Caricare un'altra schermata? Le modifiche non salvate andranno perse.",
+  confirm_lang: "Cambiare lingua? Le modifiche non salvate andranno perse."
+});
+Object.assign(I18N.en, {
+  confirm_load: "Load another screen? Unsaved changes will be lost.",
+  confirm_lang: "Change language? Unsaved changes will be lost."
+});
+
+/* tracciamento modifiche non salvate (confronto snapshot) */
+function serializeLayout() {
+  return JSON.stringify({
+    name: layout.name || "",
+    background: layout.background || "#000000",
+    elements: (layout.elements || []).map(stripPreview)
+  });
+}
+let savedSnapshot = "";
+function isDirty() { return serializeLayout() !== savedSnapshot; }
+window.addEventListener("beforeunload", (e) => {
+  if (window.__navigating) return;
+  if (isDirty()) { e.preventDefault(); e.returnValue = ""; }
+});
+
+/* logo del progetto (SVG inline, niente binari) */
+const BRAND_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4A93C"/>
+      <stop offset="1" stop-color="#E07E22"/>
+    </linearGradient>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F2A93B" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#F2A93B" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+
+  <!-- sfondo squircle ambra -->
+  <rect x="0" y="0" rx="120" fill="url(#bg)"/>
+
+  <!-- ombra del dispositivo -->
+  <rect x="108" y="80" width="296" height="372" rx="46" fill="#000000" opacity="0.16"/>
+
+  <!-- dispositivo (citofono) bianco -->
+  <rect x="108" y="70" width="296" height="372" rx="46" fill="#F5F2EB" stroke="#E2DBCD" stroke-width="2"/>
+
+  <!-- camera -->
+  <circle cx="256" cy="92" r="6" fill="#2B313D"/>
+  <circle cx="254" cy="90" r="2" fill="#FFFFFF" opacity="0.55"/>
+
+  <!-- schermo -->
+  <rect x="148" y="110" width="216" height="150" rx="18" fill="#0E141D"/>
+  <rect x="148" y="110" width="216" height="150" rx="18" fill="none" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+
+  <!-- indicatore "live" -->
+  <circle cx="174" cy="130" r="7" fill="#39C0A8"/>
+  <!-- finte etichette UI -->
+  <rect x="300" y="125" width="44" height="7" rx="3.5" fill="#FFFFFF" opacity="0.25"/>
+  <rect x="312" y="139" width="32" height="6" rx="3" fill="#FFFFFF" opacity="0.15"/>
+
+  <!-- grafico (dashboard live) -->
+  <path d="M164,246 L164,226 L201,210 L238,220 L275,184 L312,194 L348,158 L348,246 Z" fill="url(#area)"/>
+  <line x1="164" y1="246" x2="348" y2="246" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/>
+  <polyline points="164,226 201,210 238,220 275,184 312,194 348,158"
+            fill="none" stroke="#F2A93B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="348" cy="158" r="8" fill="#F2A93B"/>
+  <circle cx="348" cy="158" r="3.2" fill="#0E141D"/>
+
+  <!-- pulsanti del citofono -->
+  <circle cx="210" cy="316" r="9" fill="#CBD0DA"/>
+  <circle cx="256" cy="316" r="9" fill="#CBD0DA"/>
+  <circle cx="302" cy="316" r="9" fill="#CBD0DA"/>
+  <!-- griglia altoparlante -->
+  <rect x="206" y="356" width="100" height="6" rx="3" fill="#E4DFD4"/>
+  <rect x="222" y="372" width="68" height="6" rx="3" fill="#E9E5DC"/>
+</svg>`;
+let __brandN = 0;
+function injectBrand(root) {
+  (root || document).querySelectorAll("[data-brand]").forEach(sp => {
+    if (sp.firstChild) return;
+    const n = ++__brandN;
+    sp.innerHTML = BRAND_SVG
+      .replace('id="bg"', 'id="bg' + n + '"').replace('url(#bg)', 'url(#bg' + n + ')')
+      .replace('id="area"', 'id="area' + n + '"').replace('url(#area)', 'url(#area' + n + ')');
+  });
+}
+
+/* vista iniziale: galleria, ma non dopo un cambio lingua */
+async function startupView() {
+  if (sessionStorage.getItem("cs_skipHome")) {
+    sessionStorage.removeItem("cs_skipHome");
+    const open = sessionStorage.getItem("cs_openLayout");
+    sessionStorage.removeItem("cs_openLayout");
+    if (open) { savedSnapshot = serializeLayout(); await loadLayoutByName(open); }
+    return;
+  }
+  showHome();
+}
+
+/* avvio: dopo che TUTTE le definizioni (incluso il blocco fix) sono pronte */
 boot();
