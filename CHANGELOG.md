@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4
+
+Risolto il blocco della GUI del citofono e completata la chiusura della scheda con la rotella.
+
+- **Fix del blocco al boot**: `SchedaPage.qml` usava la proprieta' `mipmap` con `import QtQuick 2.0`, ma `mipmap` esiste solo da QtQuick 2.3. Su questo firmware (Qt 5.10) era un errore di compilazione che faceva fallire l'intero `main.qml`, lasciando la GUI bloccata al boot con i tasti non responsivi. Ora la pagina usa `import QtQuick 2.7` e `mipmap` e' stato rimosso (la nitidezza delle icone resta garantita da `sourceSize`).
+- **Chiusura con la rotella**: confermati i codici dei tasti hardware (su = Key_Up, giu = Key_Down, pressione = Key_Return). La scheda si chiude con qualsiasi azione della rotella.
+- **Renderer aggiornato a v3** (la `SchedaPage` e' cambiata): dopo l'aggiornamento dell'add-on, reinstalla la pagina dal Citofono.
+
 ## 0.9.3
 
 Ripubblicazione per far prendere a Home Assistant il fix del riavvio.

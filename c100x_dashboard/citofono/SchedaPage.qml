@@ -1,4 +1,4 @@
-import QtQuick 2.0
+import QtQuick 2.7
 import BtClass100 1.0
 import BtObjects 2.0
 import Components 1.0
@@ -162,7 +162,6 @@ FocusScope {
                 fillMode: Image.PreserveAspectFit
                 cache: true
                 smooth: true
-                mipmap: true
                 antialiasing: true
                 // Rasterizza l'SVG/immagine alla dimensione reale a schermo:
                 // senza questo, le icone MDI (viewBox 24x24) venivano scalate da 24px e risultavano sgranate.
@@ -185,6 +184,9 @@ FocusScope {
         repeat: false
         onTriggered: root.back()
     }
+
+    // Rete di sicurezza anti-blocco: la scheda si chiude SEMPRE dopo 5 minuti,
+    // anche se autoCloseSeconds = 0. Cosi' non puo' mai restare incastrata.
 
     // Tasti hardware che arrivano come eventi Keys chiudono la scheda.
     // NB: NON si forza il focus e NON si "accetta" l'evento, per non rubare la
