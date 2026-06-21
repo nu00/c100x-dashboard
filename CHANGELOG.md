@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.3
+
+Ripubblicazione per far prendere a Home Assistant il fix del riavvio.
+
+- Nessuna modifica funzionale rispetto alla 0.9.2: il fix del riavvio del citofono (`setsid`) era stato aggiunto sotto la versione 0.9.2 gia' installata, e HA non rileva aggiornamenti se il numero di versione non cambia. Questa versione esiste solo per forzare l'aggiornamento.
+- Renderer invariato (v2). Dopo l'aggiornamento dell'add-on, reinstalla la pagina dal Citofono: ora il riavvio del citofono parte davvero.
+
 ## 0.9.2
 
 Ripristino della navigazione del citofono.

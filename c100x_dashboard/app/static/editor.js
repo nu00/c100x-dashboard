@@ -1,4 +1,4 @@
-/* C100X Dashboard — editor (v0.9.2) — IT/EN */
+/* C100X Dashboard — editor (v0.9.3) — IT/EN */
 
 /* ---------- i18n ---------- */
 const I18N = {
