@@ -205,3 +205,67 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 
 /* ---- Selettore lingua ---- */
 #langSel { width: 52px; padding: .3rem; }
+
+/* ---- v0.9.0 editor additions ---- */
+.brand-logo { border-radius: 5px; display: block; object-fit: contain; }
+.brand-logo.lg { width: 44px; height: 44px; }
+
+/* pill stato citofono */
+.cito-status { display: inline-flex; align-items: center; gap: .35rem; margin-left: .5rem;
+  font-family: var(--mono); font-size: .68rem; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: .08rem .5rem; max-width: 230px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cito-status .cs-dot { width: 8px; height: 8px; border-radius: 50%; background: #5a6373; flex: 0 0 auto; }
+.cito-status.online .cs-dot { background: #46c97e; box-shadow: 0 0 7px #46c97e; }
+.cito-status.showing .cs-dot { background: var(--accent); box-shadow: 0 0 7px var(--accent); }
+.cito-status.off { opacity: .55; }
+
+/* icone palette */
+.pal-ico { display: inline-flex; width: 18px; height: 18px; vertical-align: -3px; margin-right: .5rem; flex: 0 0 auto; }
+.pal-ico svg { width: 100%; height: 100%; fill: var(--accent); }
+.palette button[data-add] { display: flex; align-items: center; }
+
+/* bottoni solo-icona */
+.iconbtn { display: inline-flex; align-items: center; justify-content: center; padding: .3rem .45rem; }
+.iconbtn .pal-ico { margin-right: 0; width: 16px; height: 16px; vertical-align: 0; }
+.iconbtn .pal-ico svg { fill: currentColor; }
+
+/* selezione multipla: nascondi le maniglie quando >1 selezionato */
+.screen.multi .handle, .screen.multi .rot-handle { display: none !important; }
+.el.selected { outline: 1px dashed var(--accent); outline-offset: 1px; }
+
+/* marquee di selezione */
+.marquee { position: absolute; border: 1px solid var(--accent); background: rgba(242,169,59,.12); pointer-events: none; z-index: 50; }
+
+/* barra allineamento (pannello proprietà, multi-selezione) */
+.align-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .35rem; margin: .3rem 0 .6rem; }
+.align-grid button { display: inline-flex; align-items: center; justify-content: center; padding: .4rem 0; }
+.align-grid button svg { width: 18px; height: 18px; fill: var(--text); }
+.multi-count { font-family: var(--mono); font-size: .8rem; color: var(--accent); margin: .2rem 0 .5rem; }
+
+/* overlay "le mie schede" */
+.home-overlay { position: fixed; inset: 0; background: rgba(8,10,14,.86); backdrop-filter: blur(3px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.home-overlay[hidden] { display: none; }
+.home-box { width: 920px; max-width: 95vw; max-height: 88vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.6rem 1.8rem; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.home-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.4rem; }
+.home-head h1 { margin: 0; font-size: 1.4rem; font-weight: 600; }
+.home-head h1 strong { color: var(--accent); }
+.home-head .hint { margin: .2rem 0 0; }
+.home-x { margin-left: auto; font-size: 1rem; color: var(--muted); }
+.home-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.home-card { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; background: var(--panel-2); transition: border-color .12s, transform .12s; display: flex; flex-direction: column; }
+.home-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.home-card .thumb-wrap { width: 100%; aspect-ratio: 5 / 3; background: #000; position: relative; overflow: hidden; }
+.home-card .thumb-scale { position: absolute; top: 0; left: 0; transform-origin: top left; }
+.home-card .card-name { padding: .55rem .7rem; font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-card .card-del { position: absolute; top: .35rem; right: .35rem; z-index: 3; border: none; background: rgba(0,0,0,.55); color: #fff; border-radius: 6px; padding: .15rem .4rem; font-size: .75rem; cursor: pointer; opacity: 0; transition: opacity .12s; }
+.home-card:hover .card-del { opacity: 1; }
+.home-new { border: 1px dashed var(--line); display: flex; align-items: center; justify-content: center; min-height: 150px; color: var(--muted); font-size: 1rem; gap: .5rem; cursor: pointer; border-radius: 12px; background: transparent; transition: border-color .12s, color .12s; }
+.home-new:hover { border-color: var(--accent); color: var(--accent); }
+.home-new .plus { font-size: 1.8rem; line-height: 1; }
+.home-empty { color: var(--muted); font-size: .9rem; padding: .5rem 0; }
+
+/* anteprima icona nella tendina di scelta icona (0.9.0) */
+.ta-left { display: flex; align-items: center; gap: .45rem; min-width: 0; }
+.ta-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-ico { width: 20px; height: 20px; flex: 0 0 auto; object-fit: contain; background: rgba(255,255,255,.05); border-radius: 4px; padding: 1px; }
+.ta-item:hover .ta-ico, .ta-item.active .ta-ico { background: rgba(0,0,0,.15); }

@@ -15,7 +15,7 @@ const path = require("path");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.8.2";
+const VERSION = "0.9.0";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -218,7 +218,9 @@ app.post("/api/hide", async (req, res) => {
 });
 
 // --- Endpoint per il citofono ---
+let lastPoll = 0;
 app.get("/active", async (req, res) => {
+    lastPoll = Date.now();
     try {
         const a = await readActive();
         const base = { name: a.name || null, background: "#000000", elements: [], showSeq: a.showSeq || 0, hideSeq: a.hideSeq || 0, duration: a.duration || 0 };
@@ -235,6 +237,16 @@ app.get("/active", async (req, res) => {
         out.duration = a.duration || 0;
         res.json(out);
     } catch (e) { res.status(500).json({ error: String(e) }); }
+});
+
+app.get("/api/citofono/live", async (req, res) => {
+    const a = await readActive();
+    res.json({
+        online: (Date.now() - lastPoll) < 6000,
+        lastSeen: lastPoll || null,
+        activeName: a.name || null,
+        showing: (a.showSeq || 0) > (a.hideSeq || 0)
+    });
 });
 
 // ===== Provisioning del citofono via SSH =====

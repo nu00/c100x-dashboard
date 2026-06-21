@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0
+
+Editor potenziato.
+
+- **Copia/incolla** degli elementi sulla tela (Ctrl+C / Ctrl+V, Ctrl+D duplica, Ctrl+A seleziona tutto).
+- **Selezione multipla**: shift+clic o trascina sul vuoto per il rettangolo di selezione; sposti il gruppo insieme.
+- **Allinea e distribuisci**: pannello con allineamento (sinistra/centro/destra, alto/centro/basso) e distribuzione automatica orizzontale/verticale.
+- **Le mie schede**: all'avvio compare una galleria delle schermate salvate con anteprima e un pulsante grande per crearne una nuova.
+- **Icone nella palette** accanto a ogni elemento aggiungibile; **logo del progetto** al posto del pallino in alto a sinistra.
+- **Anteprima dell'icona** nel menu di scelta: ogni suggerimento mostra l'icona prima del nome.
+- **Stato del citofono** nella barra in alto: indica se sta facendo polling e quale schermata e' impostata come attiva.
+- Fix: i campi di testo non vengono piu' trattati come campi password dal browser (autofill disinnescato).
+
 ## 0.8.2
 
 - Icone MDI nitide davvero: l'add-on ora inietta `width`/`height` nell'SVG servito. Le icone MDI

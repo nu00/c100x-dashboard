@@ -4,16 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>C100X Dashboard — Editor</title>
-<link rel="stylesheet" href="style.css?v=0.8.2">
+<link rel="stylesheet" href="style.css?v=0.9.0">
 </head>
 <body>
+<!-- decoy per disinnescare l'autofill credenziali del browser -->
+<div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden">
+  <input type="text" name="fake_user" autocomplete="username" tabindex="-1">
+  <input type="password" name="fake_pass" autocomplete="new-password" tabindex="-1">
+</div>
+
 <header class="topbar">
   <div class="brand">
-    <span class="dot"></span>
+    <img class="brand-logo" src="icon.png?v=0.9.0" alt="" width="22" height="22">
     <span>C100X&nbsp;<strong>Dashboard</strong></span>
     <span class="screen-spec">800 × 480</span>
+    <span id="citoStatus" class="cito-status off" title=""><span class="cs-dot"></span><span class="cs-txt"></span></span>
   </div>
   <div class="layout-controls">
+    <button id="btnHome" class="iconbtn" data-i18n-title="t_home" title="Le mie schede"><span class="pal-ico" data-ico="home"></span></button>
     <input id="layoutName" type="text" data-i18n-ph="ph_layout_name" maxlength="40" autocomplete="off">
     <button id="btnSave" class="primary" data-i18n="save">Salva</button>
     <select id="layoutList"><option value="" data-i18n="load_layout">— carica layout —</option></select>
@@ -30,15 +38,15 @@
 <main class="workspace">
   <aside class="palette">
     <h2 data-i18n="add">Aggiungi</h2>
-    <button data-add="text" data-i18n="el_text">Testo</button>
-    <button data-add="entity" data-i18n="el_entity">Valore sensore</button>
-    <button data-add="image" data-i18n="el_image">Immagine</button>
-    <button data-add="icon" data-i18n="el_icon">Icona</button>
-    <button data-add="rect" data-i18n="el_rect">Rettangolo</button>
-    <button data-add="circle" data-i18n="el_circle">Cerchio</button>
-    <button data-add="triangle" data-i18n="el_triangle">Triangolo</button>
-    <button data-add="line" data-i18n="el_line">Linea</button>
-    <button data-add="arrow" data-i18n="el_arrow">Freccia</button>
+    <button data-add="text"><span class="pal-ico" data-ico="text"></span><span data-i18n="el_text">Testo</span></button>
+    <button data-add="entity"><span class="pal-ico" data-ico="entity"></span><span data-i18n="el_entity">Valore sensore</span></button>
+    <button data-add="image"><span class="pal-ico" data-ico="image"></span><span data-i18n="el_image">Immagine</span></button>
+    <button data-add="icon"><span class="pal-ico" data-ico="icon"></span><span data-i18n="el_icon">Icona</span></button>
+    <button data-add="rect"><span class="pal-ico" data-ico="rect"></span><span data-i18n="el_rect">Rettangolo</span></button>
+    <button data-add="circle"><span class="pal-ico" data-ico="circle"></span><span data-i18n="el_circle">Cerchio</span></button>
+    <button data-add="triangle"><span class="pal-ico" data-ico="triangle"></span><span data-i18n="el_triangle">Triangolo</span></button>
+    <button data-add="line"><span class="pal-ico" data-ico="line"></span><span data-i18n="el_line">Linea</span></button>
+    <button data-add="arrow"><span class="pal-ico" data-ico="arrow"></span><span data-i18n="el_arrow">Freccia</span></button>
 
     <h2 data-i18n="background">Sfondo</h2>
     <label class="row"><span data-i18n="color">Colore</span>
@@ -51,6 +59,7 @@
     </label>
 
     <p class="hint" data-i18n="palette_hint">Trascina per spostare. Maniglia in basso a destra per ridimensionare. Canc per eliminare.</p>
+    <p class="hint" data-i18n="multi_hint">Shift+clic o trascina sul vuoto per selezionare più elementi. Ctrl+C / Ctrl+V per copiare.</p>
   </aside>
 
   <section class="stage-area" id="stageArea">
@@ -66,6 +75,20 @@
   </aside>
 </main>
 
+<div id="homeOverlay" class="home-overlay" hidden>
+  <div class="home-box">
+    <div class="home-head">
+      <img class="brand-logo lg" src="icon.png?v=0.9.0" alt="" width="44" height="44">
+      <div>
+        <h1>C100X <strong>Dashboard</strong></h1>
+        <p class="hint" data-i18n="home_sub">Le tue schermate salvate</p>
+      </div>
+      <button id="homeClose" class="iconbtn home-x" hidden title="">✕</button>
+    </div>
+    <div id="homeGrid" class="home-grid"></div>
+  </div>
+</div>
+
 <div id="citoModal" class="modal" hidden>
   <div class="modal-box">
     <h2 data-i18n="m_title">Citofono — installazione via SSH</h2>
@@ -75,7 +98,7 @@
       <div class="field"><label data-i18n="m_port">Porta</label><input id="cf_port" type="number" value="22"></div>
       <div class="field"><label data-i18n="m_user">Utente</label><input id="cf_user" type="text" value="root" autocomplete="off"></div>
     </div>
-    <div class="field"><label data-i18n="m_pass">Password</label><input id="cf_pass" type="password" autocomplete="off"></div>
+    <div class="field"><label data-i18n="m_pass">Password</label><input id="cf_pass" type="password" autocomplete="new-password"></div>
     <div class="toggle-row"><label><input id="cf_save" type="checkbox"> <span data-i18n="m_savepass">Salva la password nell'add-on</span></label></div>
     <div class="field"><label data-i18n="m_base">URL dell'add-on (come lo vede il citofono)</label><input id="cf_base" type="text" placeholder="http://IP_HA:8099" autocomplete="off"></div>
     <details>
@@ -92,6 +115,6 @@
   </div>
 </div>
 
-<script src="editor.js?v=0.8.2"></script>
+<script src="editor.js?v=0.9.0"></script>
 </body>
 </html>
