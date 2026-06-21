@@ -390,7 +390,12 @@ app.post("/api/citofono/install", async (req, res) => {
             throw new Error("la patch non ha confermato il completamento (controlla il percorso node e i permessi)");
 
         if (reboot) {
-            try { await sshExec(conn, "(sleep 1 && reboot) >/dev/null 2>&1 &"); log.push("Riavvio del citofono in corso…"); } catch (_) {}
+            // Il comando DEVE sopravvivere alla chiusura della sessione SSH: senza
+            // setsid il processo in background riceve SIGHUP durante lo sleep e il
+            // reboot non parte mai. Usiamo anche il path completo (PATH minimale in
+            // shell non interattiva) con fallback, e stdin da /dev/null.
+            const rebootCmd = "setsid sh -c 'sleep 2; /sbin/reboot 2>/dev/null || reboot' </dev/null >/dev/null 2>&1 &";
+            try { await sshExec(conn, rebootCmd); log.push("Riavvio del citofono richiesto (tra ~2s)…"); } catch (_) {}
         } else {
             log.push("Fatto. Riavvia il citofono per ricaricare la GUI.");
         }
