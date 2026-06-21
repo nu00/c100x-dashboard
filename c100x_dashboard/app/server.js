@@ -15,7 +15,7 @@ const path = require("path");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.8.0";
+const VERSION = "0.8.2";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -111,7 +111,15 @@ app.get("/icon/:name", (req, res) => {
     try {
         let svg = fs.readFileSync(path.join(MDI_SVG_DIR, name + ".svg"), "utf8");
         const c = String(req.query.color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
-        if (c.length === 6) svg = svg.replace(/<svg /, `<svg fill="#${c}" `);
+        // Le SVG MDI hanno solo viewBox 24x24 (niente width/height): senza una dimensione
+        // esplicita certi client (es. il QtSvg del citofono) le rasterizzano a 24px e poi le
+        // ingrandiscono, risultando sfocate. Iniettiamo width/height alla dimensione richiesta.
+        let s = parseInt(req.query.s, 10);
+        if (!Number.isFinite(s)) s = 256;
+        s = Math.max(16, Math.min(512, s));
+        let attrs = `width="${s}" height="${s}"`;
+        if (c.length === 6) attrs += ` fill="#${c}"`;
+        svg = svg.replace(/<svg /, `<svg ${attrs} `);
         res.type("image/svg+xml").set("Cache-Control", "public, max-age=86400").send(svg);
     } catch { res.status(404).end(); }
 });

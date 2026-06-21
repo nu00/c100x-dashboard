@@ -35,11 +35,13 @@ FocusScope {
     FontLoader { id: robotoBold; source: root.addonBase + "/fonts/Roboto-Bold.ttf" }
     property string uiFont: robotoReg.name ? robotoReg.name : "Sans"
 
-    function imgSource(m) {
+    function imgSource(m, px) {
         if (m.type === "icon") {
             if (!m.icon) return "";
             var col = (m.color || "#ffffff").toString().replace("#", "");
-            return root.addonBase + "/icon/" + m.icon + "?color=" + col;
+            var u = root.addonBase + "/icon/" + m.icon + "?color=" + col;
+            if (px && px > 0) u += "&s=" + Math.round(px);
+            return u;
         } else {
             var u = (m.url || "").toString();
             if (u === "") return "";
@@ -166,7 +168,7 @@ FocusScope {
                 // senza questo, le icone MDI (viewBox 24x24) venivano scalate da 24px e risultavano sgranate.
                 sourceSize.width: Math.max(1, Math.round(width))
                 sourceSize.height: Math.max(1, Math.round(height))
-                source: root.imgSource(modelData)
+                source: root.imgSource(modelData, Math.max(width, height))
             }
         }
     }

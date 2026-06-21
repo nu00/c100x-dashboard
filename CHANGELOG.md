@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.2
+
+- Icone MDI nitide davvero: l'add-on ora inietta `width`/`height` nell'SVG servito. Le icone MDI
+  hanno solo `viewBox` 24x24, quindi il QtSvg del citofono le rasterizzava a 24px e poi le
+  ingrandiva (sfocate); le immagini raster erano nitide perche' hanno risoluzione vera. Il citofono
+  ora chiede la dimensione reale a schermo (`?s=`), cosi' l'icona viene generata gia' grande.
+  NB: il fix e' nel server dell'add-on, quindi va aggiornato/ricostruito l'add-on, non solo il QML.
+
 ## 0.8.1
 
 - Icone più nitide sul citofono: l'SVG ora viene rasterizzato alla dimensione reale a schermo
