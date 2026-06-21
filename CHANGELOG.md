@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1
+
+- Icone più nitide sul citofono: l'SVG ora viene rasterizzato alla dimensione reale a schermo
+  (`sourceSize`) con smoothing, invece di essere scalato da 24px. Risolve le icone MDI "sgranate".
+- Tipografia coerente tra editor e citofono: l'add-on imbarca **Roboto** (regular/bold) e lo usa
+  sia nell'editor (`@font-face`) sia nel renderer QML (`FontLoader`), così l'anteprima coincide con
+  ciò che appare sul display. Roboto si abbina alle icone Material Design (MDI).
+
 ## 0.8.0 — Prima release pubblica
 
 Prima pubblicazione del progetto. Comprende l'add-on di Home Assistant (editor + server),

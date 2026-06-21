@@ -148,6 +148,7 @@ Questo progetto si appoggia al lavoro di reverse engineering fatto prima dalla c
 - [slyoldfox/c300x-controller](https://github.com/slyoldfox/c300x-controller) — il controller che gira sul citofono e su cui questo progetto si basa (runtime Node, endpoint HTTP, ponte verso Home Assistant).
 - [slyoldfox/c300x-dashboard](https://github.com/slyoldfox/c300x-dashboard) — l'ispirazione: una dashboard QML alimentata dal controller, pensata per il C300X (Qt 4.8.7 / QtQuick 1.x). Dato che dichiara *"Bticino c100x devices are untested"* e usa una generazione Qt/QtQuick diversa, il renderer di questo progetto è stato riscritto da zero per il C100X (Qt5 / QtQuick 2.x).
 - [fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) — il firmware modificato che rende possibile l'accesso root/SSH.
+- [Roboto](https://fonts.google.com/specimen/Roboto) (Apache License 2.0) — il font imbarcato, condiviso tra editor e renderer del citofono.
 
 ## Licenza
 

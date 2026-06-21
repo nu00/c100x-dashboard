@@ -30,6 +30,11 @@ FocusScope {
 
     function unselectItem() {}
 
+    // Font condiviso con l'editor (servito dall'add-on), per coerenza tipografica
+    FontLoader { id: robotoReg; source: root.addonBase + "/fonts/Roboto-Regular.ttf" }
+    FontLoader { id: robotoBold; source: root.addonBase + "/fonts/Roboto-Bold.ttf" }
+    property string uiFont: robotoReg.name ? robotoReg.name : "Sans"
+
     function imgSource(m) {
         if (m.type === "icon") {
             if (!m.icon) return "";
@@ -69,6 +74,7 @@ FocusScope {
                 visible: modelData.type === "text" || modelData.type === "entity"
                 anchors.fill: parent
                 color: modelData.color || "white"
+                font.family: root.uiFont
                 font.pixelSize: modelData.fontSize || 24
                 font.bold: modelData.bold ? true : false
                 wrapMode: Text.WordWrap
@@ -153,6 +159,13 @@ FocusScope {
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectFit
                 cache: true
+                smooth: true
+                mipmap: true
+                antialiasing: true
+                // Rasterizza l'SVG/immagine alla dimensione reale a schermo:
+                // senza questo, le icone MDI (viewBox 24x24) venivano scalate da 24px e risultavano sgranate.
+                sourceSize.width: Math.max(1, Math.round(width))
+                sourceSize.height: Math.max(1, Math.round(height))
                 source: root.imgSource(modelData)
             }
         }

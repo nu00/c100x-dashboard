@@ -1,3 +1,18 @@
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/Roboto-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/Roboto-Bold.ttf") format("truetype");
+}
+
 :root {
   --bg: #15171c;
   --panel: #1d2027;
@@ -85,7 +100,7 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .el { position: absolute; user-select: none; cursor: grab; }
 .el.selected { outline: 1px dashed var(--accent); outline-offset: 1px; }
 .el.dragging { cursor: grabbing; }
-.el-text { display: flex; align-items: flex-start; white-space: pre-wrap; word-break: break-word; line-height: 1.15; }
+.el-text { display: flex; align-items: flex-start; white-space: pre-wrap; word-break: break-word; line-height: 1.15; font-family: "Roboto", var(--sans); }
 .el-img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .el-shape { width: 100%; height: 100%; }
 

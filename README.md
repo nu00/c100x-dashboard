@@ -161,6 +161,7 @@ This project stands on the shoulders of prior reverse-engineering work by the BT
 - [slyoldfox/c300x-controller](https://github.com/slyoldfox/c300x-controller) — the on-device controller this project relies on (Node runtime, HTTP endpoints, Home Assistant bridge).
 - [slyoldfox/c300x-dashboard](https://github.com/slyoldfox/c300x-dashboard) — the inspiration: a controller-fed QML dashboard for the C300X (Qt 4.8.7 / QtQuick 1.x). Since it states *"Bticino c100x devices are untested"* and targets a different Qt/QtQuick generation, the renderer here was written from scratch for the C100X (Qt5 / QtQuick 2.x).
 - [fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) — the modified firmware that makes root/SSH access possible.
+- [Roboto](https://fonts.google.com/specimen/Roboto) (Apache License 2.0) — the bundled UI font, shared by the editor and the intercom renderer.
 
 ## License
 
