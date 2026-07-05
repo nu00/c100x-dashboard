@@ -56,7 +56,7 @@ const BLOCK = `
                 if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                     try {
                         var d = JSON.parse(xhr.responseText);
-                        schedaWatcher.schedaData = { background: d.background, elements: d.elements || [] };
+                        schedaWatcher.schedaData = { background: d.background, elements: d.elements || [], buttons: d.buttons || null, name: d.name || "" };
                         schedaWatcher.duration = d.duration || 0;
                         var seq = d.showSeq || 0;
                         var hseq = d.hideSeq || 0;

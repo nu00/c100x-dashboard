@@ -23,8 +23,8 @@ refreshes the values every second.
 ## What's in here
 
 - **Add-on** (`c100x_dashboard/`) — a Home Assistant add-on that is both the **editor** (web UI)
-  and the **server** the intercom polls. It reads entity values from HA and serves the active
-  screen, images and icons over HTTP.
+  and the **server** the intercom polls. It reads entity values from HA, renders Jinja2 templates,
+  and serves the active screen, images and icons over HTTP.
 - **Intercom side** (`c100x_dashboard/citofono/`) — `SchedaPage.qml`, the renderer that runs on
   the intercom, plus the patch scripts. Can be installed automatically from the add-on via SSH.
 - **Integration** (`custom_components/c100x_dashboard/`) — an optional Home Assistant integration
@@ -70,13 +70,33 @@ repo URL under Store → ⋮ → *Repositories*. The add-on installs from there.
 
 ## Use the editor
 
-1. Add elements from the palette (text, sensor value, image, icon, shapes, line, arrow).
-2. For a sensor value, search the entity (autocomplete) — a live preview is shown.
-3. Name the layout and **Save**.
-4. Press **Show now** (with a duration) to display it on the intercom immediately.
+**Elements** — add from the palette: text, sensor value, entity icon, template, image, icon,
+shapes, line, arrow.
 
-Drag to move, use the bottom-right handle to resize, and the round handle on top to rotate.
-Alignment guides snap elements to each other and to the screen centre.
+- **Sensor value**: search the entity (autocomplete) and get a live preview. Optionally show a
+  specific **attribute** instead of the state, append the **unit of measurement automatically**,
+  and **format dates/times** (e.g. `DD/MM/YYYY`, `HH:mm`).
+- **Entity icon**: icon and colour follow the entity state. You can **force a specific icon**
+  while keeping the state-driven colour, or drive the colour from a **conditional template**.
+- **Template**: write Jinja2 with basic markdown (bold, italic, headings, lists, line breaks),
+  rendered like a Lovelace markdown card. A second template can set the colour conditionally
+  (a direct colour, or true/false → two configurable colours).
+
+**Intercom buttons** — click a key on the on-screen intercom to bind a Home Assistant action to
+it. The front keys (1–4, ★, lock, eye), the wheel (up/down/OK) and both handsets are supported.
+Each button can show an on-screen message (which may contain Jinja2 for dynamic text) and
+optionally light up on press. Action data may also contain Jinja2 templates.
+
+**Editing** — drag to move, bottom-right handle to resize, top handle to rotate. Extras:
+
+- Arrow keys move by 1px (Shift = 10px), PgUp/PgDn change stacking order, Del removes.
+- Select several elements (Shift-click or rubber-band) to align them; **group** with Ctrl+G,
+  ungroup with Ctrl+Shift+G.
+- Zoom with the wheel, pan with the middle mouse button, double middle-click to reset.
+
+**Screens** — name the layout and **Save**; press **Show now** (with a duration) to display it
+on the intercom. From the home screen you can **export** all screens to a backup file and
+**import** them back — handy so you don't lose your work if you reinstall the add-on.
 
 ## Install on the intercom
 
@@ -141,6 +161,9 @@ rest_command:
 |---|---|---|
 | GET | `/` | editor (Ingress) |
 | GET/PUT/DELETE | `/api/layouts[/:name]` | list / save / delete layouts |
+| GET | `/api/layout-live/:name` | layout with values resolved to the current state (thumbnails) |
+| GET/POST | `/api/export` · `/api/import` | back up / restore all screens |
+| POST | `/api/template-preview` | render a Jinja2 template for the editor preview |
 | POST | `/api/active` | set the active layout |
 | POST | `/api/show` | show now (`{name?, duration?}`) |
 | POST | `/api/hide` | hide |
@@ -155,6 +178,8 @@ rest_command:
 - The intercom's display has a limited colour gamut: flat graphics, icons and shapes look great;
   photographic images may shift in colour.
 - Only MDI icons are supported (HA's built-in set); custom icon packs aren't served to the intercom.
+- Template elements support **basic** markdown (bold, italic, headings, lists, line breaks): the
+  intercom renders an HTML subset (Qt 5 RichText), so very complex markdown may not render exactly.
 - The SSH password, if saved, is stored in the add-on's `/data` in clear text and never returned
   to the browser.
 

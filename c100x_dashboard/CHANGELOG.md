@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.10.0
+
+Release importante: pulsanti del citofono configurabili, editor completamente rinnovato con anteprima fedele del dispositivo, supporto template Jinja2 in stile Lovelace, e molte migliorie a icone, valori ed esperienza d'uso.
+
+### Pulsanti del citofono
+- **Front-button configurabili**: i tasti frontali (1-4, ★, serratura, occhio), la rotella (su/giù/OK) e le due cornette possono lanciare azioni di Home Assistant, definite per singola scheda e attive solo mentre la scheda è a schermo.
+- **Illuminazione tasto**: opzione per-pulsante per accendere il LED del tasto alla pressione (di default spento). L'azione HA parte comunque.
+- **Testo dinamico (toast)**: il messaggio mostrato a schermo alla pressione può contenere Jinja2, valutato in tempo reale (es. mostrare lo stato reale di una luce anche con un comando toggle).
+- **Template nei dati dell'azione**: i valori del campo "dati" possono contenere Jinja2 (es. `temperature: "{{ state_attr('climate.x','temperature') + 1 }}"`), valutati da Home Assistant all'esecuzione e convertiti nel tipo corretto.
+- **Cornette**: la cornetta sinistra (verde) risponde, la destra (rossa, icona appoggiata) riaggancia.
+- **Diagnostica**: proprietà `debugKeys` nella SchedaPage per mostrare a schermo il keycode dei tasti premuti.
+
+### Editor
+- **Anteprima fedele del citofono**: il canvas 800×480 è incorniciato da una riproduzione fedele del Classe 100X (misure dal disegno tecnico e da foto reale): vetro, tacca sensore, icone wifi/campanello, tasti a pallini, riga stella/serratura/occhio, cornette. Icone SVG reali.
+- **Adattamento allo schermo**: la vista si ridimensiona automaticamente per stare a schermo, con un po' di bordo. Barra di stato/zoom fissa in basso al centro.
+- **Zoom e pan**: zoom con la rotellina, spostamento della vista con il tasto centrale del mouse, doppio clic centrale per ripristinare.
+- **Manipolazione elementi**: sposta con le frecce (1px, Shift = 10px), z-order con PagSu/PagGiù, elimina con Canc, scorciatoie di allineamento (L/R/E/T/B/M) con più elementi selezionati, e bottoni dedicati nel pannello.
+- **Raggruppamenti**: raggruppa più elementi (Ctrl+G) per spostarli e allinearli insieme; separa con Ctrl+Shift+G.
+- **Rotazione**: i limiti ai bordi tengono conto dell'ingombro reale dell'elemento ruotato.
+- **Configurazione pulsanti dal pannello Proprietà**: cliccando un tasto della scocca, la sua configurazione appare nel pannello a destra.
+
+### Elemento Template (Jinja2 + markdown)
+- **Nuovo elemento** che rende template come le card markdown di Lovelace: scrivi Jinja2 con markdown base (grassetto, corsivo, titoli, liste, a capo), reso formattato sul citofono. Anteprima live nell'editor.
+- **Colore condizionale**: un secondo template può cambiare il colore dell'elemento, ritornando un colore diretto oppure true/false per usare due colori configurabili. Disponibile anche per le icone (statiche ed entità).
+
+### Valori ed icone
+- **Attributi oltre allo stato**: l'elemento Valore sensore può mostrare un attributo specifico (es. `temperature` di un `climate`), scelto da una tendina o digitato.
+- **Unità di misura automatica**: aggiunge il suffisso dell'unità ai valori numerici (attiva di default, disattivabile).
+- **Formato data/ora**: formatta date e orari (es. `DD/MM/YYYY`, `HH:mm`, `D MMMM YYYY`) invece del formato ISO grezzo, con mesi e giorni in italiano.
+- **Icona weather corretta**: le entità `weather.*` mostrano l'icona meteo giusta in base alla condizione.
+- **Forza icona**: per le icone entità puoi fissare manualmente un'icona MDI mantenendo il colore calcolato dallo stato.
+- **Ricerca azione ed entità**: la scelta del servizio funziona come la ricerca delle entità (scrivi `light.toggle` o solo `toggle`).
+
+### Schede
+- **Aggiornamento automatico**: aprendo una scheda salvata, icone, valori e template si aggiornano subito allo stato attuale. Le anteprime nella schermata iniziale mostrano i dati aggiornati.
+- **Export/Import**: esporta tutte le schede in un file di backup e reimportale, per non perdere il lavoro disinstallando l'add-on o spostandolo su un'altra istanza.
+
+### Note tecniche
+- Renderer della SchedaPage aggiornato (rispetto alla 0.9.4): dopo l'aggiornamento dell'add-on, **reinstalla la pagina dal Citofono**.
+- Vari fix: chiamate ai servizi HA con target nel corpo (no errore 400), inoltro corretto dei campi `buttons`/`name` alla SchedaPage.
+
 ## 0.9.4
 
 Risolto il blocco della GUI del citofono e completata la chiusura della scheda con la rotella.

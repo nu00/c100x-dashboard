@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>C100X Dashboard — Editor</title>
-<link rel="stylesheet" href="style.css?v=0.9.4">
+<link rel="stylesheet" href="style.css?v=0.10.0">
 </head>
 <body>
 <!-- decoy per disinnescare l'autofill credenziali del browser -->
@@ -39,6 +39,8 @@
     <h2 data-i18n="add">Aggiungi</h2>
     <button data-add="text"><span class="pal-ico" data-ico="text"></span><span data-i18n="el_text">Testo</span></button>
     <button data-add="entity"><span class="pal-ico" data-ico="entity"></span><span data-i18n="el_entity">Valore sensore</span></button>
+    <button data-add="entity-icon"><span class="pal-ico" data-ico="icon"></span><span data-i18n="el_entity_icon">Icona entità</span></button>
+    <button data-add="template"><span class="pal-ico" data-ico="text"></span><span data-i18n="el_template">Template</span></button>
     <button data-add="image"><span class="pal-ico" data-ico="image"></span><span data-i18n="el_image">Immagine</span></button>
     <button data-add="icon"><span class="pal-ico" data-ico="icon"></span><span data-i18n="el_icon">Icona</span></button>
     <button data-add="rect"><span class="pal-ico" data-ico="rect"></span><span data-i18n="el_rect">Rettangolo</span></button>
@@ -63,9 +65,58 @@
 
   <section class="stage-area" id="stageArea">
     <div class="stage-wrap" id="stageWrap">
-      <div class="screen" id="screen" tabindex="0"></div>
+      <!-- Scocca del citofono attorno al display. Posizioni fedeli al disegno tecnico
+           Classe 100X (344682): il display È il canvas 800x480, i tasti sono posizionati
+           in percentuale come sul dispositivo reale. Icone SVG, niente emoji. -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+          <!-- stella (tasto 5) -->
+          <symbol id="ic-star" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.7 1.2 6.6L12 18.6 6.1 21.8l1.2-6.6L2.5 9.5l6.6-.9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+          <!-- serratura/chiave (tasto 6) -->
+          <symbol id="ic-key" viewBox="0 0 24 24"><path d="M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="9" r="2.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 11.3V15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+          <!-- occhio (tasto 7) -->
+          <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+          <!-- cornetta telefono -->
+          <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11 11 0 0 0 3.4.55 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11 11 0 0 0 .55 3.4 1 1 0 0 1-.25 1z" fill="currentColor"/></symbol>
+          <!-- cornetta appoggiata = riaggancia/chiudi chiamata (orizzontale) -->
+          <symbol id="ic-phone-down" viewBox="0 0 24 24"><path d="M3.8 15.2c-.7-.7-.6-1.7 0-2.6C5.6 10.2 8.5 8.7 12 8.7s6.4 1.5 8.2 3.9c.6.9.7 1.9 0 2.6l-1.8 1.8c-.5.5-1.2.5-1.8.1l-2-1.3a1.2 1.2 0 0 1-.5-1.2l.2-1.2c-.7-.3-1.5-.4-2.3-.4s-1.6.1-2.3.4l.2 1.2a1.2 1.2 0 0 1-.5 1.2l-2 1.3c-.6.4-1.3.4-1.8-.1z" fill="currentColor"/></symbol>
+          <!-- wifi -->
+          <symbol id="ic-wifi" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18.5" r="1.3" fill="currentColor"/></symbol>
+          <!-- campanello -->
+          <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 16V10a6 6 0 0 1 12 0v6l1.5 2H4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+        </defs>
+      </svg>
+
+      <div class="cito-shell" id="citoShell">
+        <!-- vetro nero lucido del display -->
+        <div class="cito-glass"></div>
+        <span class="cito-sensor"></span>
+        <span class="cito-sideicons">
+          <svg class="i"><use href="#ic-wifi"/></svg>
+          <svg class="i"><use href="#ic-bell"/></svg>
+        </span>
+
+        <!-- il display = canvas di editing (area immagine dentro il vetro) -->
+        <div class="screen" id="screen" tabindex="0"></div>
+
+        <!-- tasti posizionati in % del corpo, misurati dalla vista frontale + foto reale -->
+        <div id="citoButtons">
+          <button class="shell-btn" data-btn="1" title="Tasto 1" style="left:20.6%;top:68.9%"><span class="dots d1"><span></span></span></button>
+          <button class="shell-btn" data-btn="2" title="Tasto 2" style="left:40.1%;top:68.9%"><span class="dots d2"><span></span><span></span></span></button>
+          <button class="shell-btn" data-btn="3" title="Tasto 3" style="left:59.8%;top:68.9%"><span class="dots d3"><span></span><span></span><span></span></span></button>
+          <button class="shell-btn" data-btn="4" title="Tasto 4" style="left:79.2%;top:68.9%"><span class="dots d4"><span></span><span></span><span></span><span></span></span></button>
+
+          <button class="shell-btn ic" data-btn="5" title="Stella (5)" style="left:30.4%;top:77%"><svg class="i"><use href="#ic-star"/></svg></button>
+          <button class="shell-btn ic" data-btn="6" title="Serratura (6)" style="left:50%;top:77%"><svg class="i"><use href="#ic-key"/></svg></button>
+          <button class="shell-btn ic" data-btn="7" title="Occhio (7)" style="left:69.5%;top:77%"><svg class="i"><use href="#ic-eye"/></svg></button>
+
+          <span class="cito-divider"></span>
+
+          <button class="shell-btn phone phone-answer" data-btn="phone_left" title="Cornetta sinistra — rispondi" style="left:12.5%;top:91.8%"><svg class="i"><use href="#ic-phone"/></svg></button>
+          <button class="shell-btn phone phone-hangup" data-btn="phone_right" title="Cornetta destra — riaggancia" style="left:85.8%;top:91.8%"><svg class="i"><use href="#ic-phone-down"/></svg></button>
+        </div>
+      </div>
     </div>
-    <div class="stage-foot"><span id="statusMsg">Pronto.</span></div>
   </section>
 
   <aside class="props" id="props">
@@ -73,6 +124,9 @@
     <div id="propsBody"><p class="hint" data-i18n="select_element">Seleziona un elemento sulla tela.</p></div>
   </aside>
 </main>
+
+<!-- Barra di stato/zoom: fissa in basso al centro dello schermo, indipendente dallo zoom. -->
+<div class="stage-foot" id="stageFoot"><span id="statusMsg">Pronto.</span></div>
 
 <div id="homeOverlay" class="home-overlay" hidden>
   <div class="home-box">
@@ -83,6 +137,11 @@
         <p class="hint" data-i18n="home_sub">Le tue schermate salvate</p>
       </div>
       <button id="homeClose" class="iconbtn home-x" hidden title="">✕</button>
+      <div class="home-tools">
+        <button id="btnExport" data-i18n="export_btn">Esporta backup</button>
+        <button id="btnImport" data-i18n="import_btn">Importa backup</button>
+        <input id="importFile" type="file" accept="application/json,.json" hidden>
+      </div>
     </div>
     <div id="homeGrid" class="home-grid"></div>
   </div>
@@ -114,6 +173,6 @@
   </div>
 </div>
 
-<script src="editor.js?v=0.9.4"></script>
+<script src="editor.js?v=0.10.0"></script>
 </body>
 </html>

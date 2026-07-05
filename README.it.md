@@ -23,8 +23,8 @@ attiva e ne aggiorna i valori ogni secondo.
 ## Cosa contiene
 
 - **Add-on** (`c100x_dashboard/`) — add-on di Home Assistant che è insieme l'**editor** (interfaccia
-  web) e il **server** che il citofono interroga. Legge i valori delle entità da HA e serve la
-  schermata attiva, le immagini e le icone via HTTP.
+  web) e il **server** che il citofono interroga. Legge i valori delle entità da HA, renderizza i
+  template Jinja2 e serve la schermata attiva, le immagini e le icone via HTTP.
 - **Lato citofono** (`c100x_dashboard/citofono/`) — `SchedaPage.qml`, il renderer che gira sul
   citofono, e gli script di patch. Installabile in automatico dall'add-on via SSH.
 - **Integrazione** (`custom_components/c100x_dashboard/`) — integrazione opzionale di Home Assistant
@@ -70,13 +70,37 @@ l'URL della repo in Store → ⋮ → *Repositories*.
 
 ## Usare l'editor
 
-1. Aggiungi gli elementi dalla palette (testo, valore sensore, immagine, icona, forme, linea, freccia).
-2. Per un valore sensore, cerca l'entità (autocomplete) — c'è l'anteprima dal vivo.
-3. Dai un nome al layout e **Salva**.
-4. Premi **Mostra ora** (con una durata) per visualizzarlo subito sul citofono.
+**Elementi** — aggiungili dalla palette: testo, valore sensore, icona entità, template, immagine,
+icona, forme, linea, freccia.
 
-Trascina per spostare, usa la maniglia in basso a destra per ridimensionare e quella tonda in alto
-per ruotare. Le guide di allineamento agganciano gli elementi tra loro e al centro dello schermo.
+- **Valore sensore**: cerca l'entità (autocomplete) con anteprima dal vivo. In più puoi mostrare
+  un **attributo** specifico invece dello stato, aggiungere in automatico l'**unità di misura** e
+  **formattare date/orari** (es. `DD/MM/YYYY`, `HH:mm`).
+- **Icona entità**: icona e colore seguono lo stato. Puoi **forzare un'icona** mantenendo il
+  colore dallo stato, oppure pilotare il colore con un **template condizionale**.
+- **Template**: scrivi Jinja2 con markdown base (grassetto, corsivo, titoli, liste, a capo), reso
+  come una card markdown di Lovelace. Un secondo template può impostare il colore in modo
+  condizionale (un colore diretto, oppure true/false → due colori configurabili).
+
+**Pulsanti del citofono** — clicca un tasto sul citofono a schermo per assegnargli un'azione di
+Home Assistant. Sono supportati i tasti frontali (1–4, ★, serratura, occhio), la rotella
+(su/giù/OK) e le due cornette. Ogni pulsante può mostrare un messaggio a schermo (che può
+contenere Jinja2 per testo dinamico) e opzionalmente illuminarsi alla pressione. Anche i dati
+dell'azione possono contenere template Jinja2.
+
+**Modifica** — trascina per spostare, maniglia in basso a destra per ridimensionare, quella in
+alto per ruotare. Inoltre:
+
+- Le frecce spostano di 1px (Shift = 10px), PagSu/PagGiù cambiano l'ordine di sovrapposizione,
+  Canc elimina.
+- Seleziona più elementi (Shift-clic o selezione a rettangolo) per allinearli; **raggruppa** con
+  Ctrl+G, separa con Ctrl+Shift+G.
+- Zoom con la rotellina, sposta la vista con il tasto centrale, doppio clic centrale per
+  ripristinare.
+
+**Schede** — dai un nome al layout e **Salva**; premi **Mostra ora** (con una durata) per
+visualizzarlo sul citofono. Dalla schermata iniziale puoi **esportare** tutte le schede in un file
+di backup e **importarle**, per non perdere il lavoro se reinstalli l'add-on.
 
 ## Installare sul citofono
 
@@ -142,6 +166,9 @@ rest_command:
 - Il display del citofono ha una gamma colori limitata: grafiche piatte, icone e forme rendono
   benissimo; le foto possono virare di colore.
 - Sono supportate solo le icone MDI (set incluso in HA); i pacchetti icone custom non vengono serviti.
+- Gli elementi template supportano markdown **di base** (grassetto, corsivo, titoli, liste, a capo):
+  il citofono rende un sottoinsieme di HTML (Qt 5 RichText), quindi markdown molto complesso
+  potrebbe non essere reso in modo perfetto.
 - La password SSH, se salvata, è memorizzata in chiaro in `/data` dell'add-on e non viene mai
   restituita al browser.
 

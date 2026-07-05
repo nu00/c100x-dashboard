@@ -15,10 +15,10 @@ const path = require("path");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.9.4";
+const VERSION = "0.10.0";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "3";
+const RENDERER_VERSION = "7";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -45,6 +45,13 @@ try {
     MDI_SVG_DIR = path.join(path.dirname(require.resolve("@mdi/svg/meta.json")), "svg");
     console.log(`[c100x-dashboard] icone MDI: ${mdiMeta.length}`);
 } catch (e) { console.warn("[c100x-dashboard] @mdi/svg non disponibile:", e.message); }
+
+// Set dei nomi MDI realmente disponibili: serve a validare le icone calcolate
+// (batteria/cover/…) così un nome inesistente non lascia un buco sul citofono.
+const MDI_NAMES = mdiMeta.length ? new Set(mdiMeta.map(m => m.name)) : null;
+
+// Risoluzione stato tradotto + icona "come Lovelace"
+const { iconForEntity, colorForEntity, buildTemplate, formatDate } = require("./entity-render.js");
 
 const IMG_EXT = /\.(png|jpe?g|gif|webp|bmp|svg)$/i;
 
@@ -73,14 +80,120 @@ async function getAllStates() {
     return r.json();
 }
 
+// Rende in UN colpo (un solo /api/template) stato tradotto + unita' + attributi icona
+// per tutte le entita' passate. Ritorna { entityId: { s, t, u, dc, ic, bl, ch } } o {}.
+async function fetchEntityData(ids, attrsById) {
+    if (!SUPERVISOR_TOKEN || !ids.length) return {};
+    const r = await fetch(`${HA_API}/template`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ template: buildTemplate(ids, attrsById) })
+    });
+    if (!r.ok) throw new Error("HA template " + r.status);
+    const txt = await r.text();
+    try { return JSON.parse(txt); } catch { return {}; }
+}
+
+// Renderizza un template Jinja2 arbitrario tramite HA (come una card markdown di Lovelace).
+// Ritorna la stringa risultante, o un messaggio d'errore leggibile.
+async function renderTemplate(code) {
+    if (!SUPERVISOR_TOKEN) return "";
+    if (!code || !String(code).trim()) return "";
+    const r = await fetch(`${HA_API}/template`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ template: String(code) })
+    });
+    const txt = await r.text();
+    if (!r.ok) {
+        // HA restituisce il messaggio d'errore del template nel corpo: lo passiamo (troncato).
+        return "⚠ " + txt.slice(0, 120);
+    }
+    return txt;
+}
+
+// Applica un colore condizionale a un elemento, valutando un template Jinja2 che puo':
+//  - ritornare un colore diretto ("#ff0000" / "red") -> usato come colore;
+//  - ritornare true/false (on/off/1/0) -> usa el.colorTrue / el.colorFalse.
+// Modifica el.color in-place. In caso d'errore lascia il colore invariato.
+async function applyConditionalColor(el) {
+    if (!el.colorTemplate || !String(el.colorTemplate).trim()) return;
+    try {
+        const cres = (await renderTemplate(el.colorTemplate)).trim();
+        const low = cres.toLowerCase();
+        if (low === "true" || low === "on" || low === "1") {
+            if (el.colorTrue) el.color = el.colorTrue;
+        } else if (low === "false" || low === "off" || low === "0" || low === "none" || low === "") {
+            if (el.colorFalse) el.color = el.colorFalse;
+        } else if (cres) {
+            el.color = cres;
+        }
+    } catch (e) { /* lascia il colore statico */ }
+}
+
+// Conversione markdown base -> HTML reso da Qt RichText (Text.RichText su Qt 5.10).
+// Supporta: **grassetto**, *corsivo*, `code`, righe (a capo), # titoli, - liste.
+function markdownToHtml(md) {
+    if (md == null) return "";
+    let s = String(md);
+    // escape HTML di base per non rompere il RichText
+    s = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // codice inline `...`
+    s = s.replace(/`([^`]+)`/g, '<font face="monospace">$1</font>');
+    // grassetto **...** e __...__
+    s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/__([^_]+)__/g, "<b>$1</b>");
+    // corsivo *...* e _..._
+    s = s.replace(/(^|[^*])\*([^*]+)\*/g, "$1<i>$2</i>").replace(/(^|[^_])_([^_]+)_/g, "$1<i>$2</i>");
+    // titoli # / ## / ### (a inizio riga)
+    s = s.replace(/^###\s+(.+)$/gm, '<b><font size="4">$1</font></b>')
+         .replace(/^##\s+(.+)$/gm, '<b><font size="5">$1</font></b>')
+         .replace(/^#\s+(.+)$/gm, '<b><font size="6">$1</font></b>');
+    // liste "- " / "* " a inizio riga -> bullet
+    s = s.replace(/^\s*[-*]\s+(.+)$/gm, "• $1");
+    // a capo -> <br>
+    s = s.replace(/\r?\n/g, "<br>");
+    return s;
+}
+
 app.get("/api/state/:entity", async (req, res) => {
-    try { res.json(await getState(req.params.entity)); } catch (e) { res.status(502).json({ error: String(e) }); }
+    try {
+        const id = req.params.entity;
+        const raw = await getState(id);
+        // Prova ad aggiungere lo stato tradotto (come lo vedra' il citofono); se fallisce, resta il grezzo.
+        let translated = raw.state, unit = (raw.attributes && raw.attributes.unit_of_measurement) || null;
+        try {
+            const d = (await fetchEntityData([id]))[id];
+            if (d) { if (d.t !== undefined && d.t !== null) translated = d.t; if (d.u) unit = d.u; }
+        } catch {}
+        // Elenco attributi disponibili (per la tendina "attributo" nell'editor).
+        const attributes = raw.attributes || {};
+        const attributeNames = Object.keys(attributes);
+        res.json({ ...raw, translated, unit, attributeNames });
+    } catch (e) { res.status(502).json({ error: String(e) }); }
 });
 
 app.get("/api/entities", async (req, res) => {
     try {
         const states = await getAllStates();
         res.json(states.map(s => ({ id: s.entity_id, name: (s.attributes && s.attributes.friendly_name) || s.entity_id })));
+    } catch (e) { res.status(502).json({ error: String(e) }); }
+});
+
+// Anteprima di un template Jinja2 per l'editor: ritorna testo grezzo e HTML markdown.
+app.post("/api/template-preview", async (req, res) => {
+    try {
+        const code = (req.body && req.body.template) || "";
+        const raw = await renderTemplate(code);
+        const out = { raw, html: markdownToHtml(raw) };
+        // colore condizionale opzionale
+        const colorCode = req.body && req.body.colorTemplate;
+        if (colorCode && String(colorCode).trim()) {
+            try {
+                const cres = (await renderTemplate(colorCode)).trim();
+                out.colorResult = cres;
+            } catch (e) { out.colorResult = null; }
+        }
+        res.json(out);
     } catch (e) { res.status(502).json({ error: String(e) }); }
 });
 
@@ -94,6 +207,92 @@ app.get("/api/entity-icons", async (req, res) => {
             if (typeof ic === "string" && ic.startsWith("mdi:")) set.add(ic.slice(4));
         }
         res.json([...set].sort());
+    } catch (e) { res.status(502).json({ error: String(e) }); }
+});
+
+// Chiama un servizio HA (domain.service) con il payload dato (target + data uniti).
+async function callService(domain, service, payload) {
+    if (!SUPERVISOR_TOKEN) throw new Error("no supervisor token");
+    const r = await fetch(`${HA_API}/services/${encodeURIComponent(domain)}/${encodeURIComponent(service)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {})
+    });
+    if (!r.ok) throw new Error("HA service " + r.status + " " + (await r.text().catch(() => "")));
+    return r.json().catch(() => ([]));
+}
+
+// Elenco servizi HA (per il configuratore azioni nell'editor, stile Strumenti Sviluppo)
+app.get("/api/services", async (req, res) => {
+    try {
+        if (!SUPERVISOR_TOKEN) return res.json([]);
+        const r = await fetch(`${HA_API}/services`, { headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}` } });
+        if (!r.ok) throw new Error("HA " + r.status);
+        res.json(await r.json());
+    } catch (e) { res.status(502).json({ error: String(e) }); }
+});
+
+// Esegue l'azione associata a un tasto della scheda attiva (chiamato dalla SchedaPage).
+app.post("/api/action", async (req, res) => {
+    try {
+        const { scheda, button } = req.body || {};
+        if (!scheda || !button) return res.status(400).json({ error: "scheda e button richiesti" });
+        let layout;
+        try { layout = JSON.parse(await fsp.readFile(layoutPath(scheda), "utf8")); }
+        catch { return res.status(404).json({ error: "scheda non trovata" }); }
+        const cfg = layout.buttons && layout.buttons[button];
+        if (!cfg || !cfg.action) return res.json({ ok: true, noop: true });
+        const a = cfg.action; // { domain, service, data, target }
+        if (!a.domain || !a.service) return res.status(400).json({ error: "azione incompleta" });
+        const payload = Object.assign({}, a.data || {});
+        // I valori del "data" possono contenere Jinja2 (es. "{{ state_attr(...) + 1 }}").
+        // L'API REST di HA NON valuta Jinja nel body, quindi li renderizziamo qui e
+        // convertiamo il risultato al tipo appropriato (numero/bool/stringa).
+        for (const k of Object.keys(payload)) {
+            let v = payload[k];
+            if (typeof v === "string") {
+                // Robustezza: alcune azioni salvate da versioni precedenti hanno il valore
+                // con le virgolette YAML incluse nella stringa (es. "\"{{ ... }}\"").
+                // Le rimuoviamo qui prima di valutare, cosi' i template vecchi funzionano.
+                const trimmed = v.trim();
+                if (trimmed.length >= 2 && ((trimmed[0] === '"' && trimmed[trimmed.length - 1] === '"') || (trimmed[0] === "'" && trimmed[trimmed.length - 1] === "'"))) {
+                    v = trimmed.slice(1, -1);
+                    payload[k] = v;
+                }
+            }
+            if (typeof v === "string" && /\{\{|\{%/.test(v)) {
+                try {
+                    let r = (await renderTemplate(v)).trim();
+                    if (/^-?\d+(\.\d+)?$/.test(r)) payload[k] = parseFloat(r);
+                    else if (r.toLowerCase() === "true") payload[k] = true;
+                    else if (r.toLowerCase() === "false") payload[k] = false;
+                    else payload[k] = r;
+                } catch (e) { /* lascia il valore originale in caso d'errore */ }
+            }
+        }
+        // L'endpoint REST /api/services/<dominio>/<servizio> vuole entity_id/area_id/device_id
+        // direttamente nel body, NON annidati in "target" (che e' formato websocket/YAML).
+        // Appiattiamo quindi target nel payload per evitare il 400 Bad Request.
+        if (a.target && typeof a.target === "object") {
+            if (a.target.entity_id !== undefined) payload.entity_id = a.target.entity_id;
+            if (a.target.area_id !== undefined) payload.area_id = a.target.area_id;
+            if (a.target.device_id !== undefined) payload.device_id = a.target.device_id;
+        } else if (typeof a.target === "string" && a.target) {
+            payload.entity_id = a.target;
+        }
+        await callService(a.domain, a.service, payload);
+        res.json({ ok: true });
+    } catch (e) { res.status(502).json({ ok: false, error: String(e) }); }
+});
+
+// Anteprima per l'editor: nome icona calcolato per un'entita' (stesso resolver del /active)
+app.get("/api/entity-icon/:entity", async (req, res) => {
+    try {
+        const id = req.params.entity;
+        const data = await fetchEntityData([id]);
+        const name = iconForEntity(id, data[id], MDI_NAMES);
+        const color = colorForEntity(id, data[id], null); // colore automatico per l'anteprima
+        res.json({ icon: name || "help-circle-outline", color });
     } catch (e) { res.status(502).json({ error: String(e) }); }
 });
 
@@ -161,10 +360,55 @@ app.get("/api/layouts", async (req, res) => {
     const files = await fsp.readdir(LAYOUTS_DIR).catch(() => []);
     res.json({ layouts: files.filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")).sort() });
 });
+// Export: tutte le schede in un unico file JSON (backup che sopravvive alla disinstallazione).
+app.get("/api/export", async (req, res) => {
+    try {
+        const files = (await fsp.readdir(LAYOUTS_DIR).catch(() => [])).filter(f => f.endsWith(".json"));
+        const layouts = {};
+        for (const f of files) {
+            const name = f.replace(/\.json$/, "");
+            try { layouts[name] = JSON.parse(await fsp.readFile(path.join(LAYOUTS_DIR, f), "utf8")); } catch {}
+        }
+        const dump = { app: "c100x-dashboard", version: 1, exportedAt: new Date().toISOString(), layouts };
+        res.setHeader("Content-Disposition", 'attachment; filename="c100x-schede-backup.json"');
+        res.setHeader("Content-Type", "application/json");
+        res.send(JSON.stringify(dump, null, 2));
+    } catch (e) { res.status(500).json({ error: String(e) }); }
+});
+// Import: ripristina schede da un backup. Query ?overwrite=1 per sovrascrivere le esistenti.
+app.post("/api/import", async (req, res) => {
+    try {
+        const body = req.body || {};
+        const layouts = body.layouts || body; // accetta sia il dump completo sia il solo oggetto layouts
+        if (!layouts || typeof layouts !== "object") return res.status(400).json({ error: "backup non valido" });
+        const overwrite = req.query.overwrite === "1" || req.query.overwrite === "true";
+        const existing = new Set((await fsp.readdir(LAYOUTS_DIR).catch(() => [])).filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")));
+        let imported = 0, skipped = 0;
+        for (const [name, layout] of Object.entries(layouts)) {
+            if (!safeName(name)) { skipped++; continue; }
+            if (existing.has(name) && !overwrite) { skipped++; continue; }
+            const clean = (layout && typeof layout === "object") ? layout : {};
+            clean.name = name;
+            await fsp.writeFile(layoutPath(name), JSON.stringify(clean, null, 2));
+            imported++;
+        }
+        res.json({ ok: true, imported, skipped });
+    } catch (e) { res.status(500).json({ error: String(e) }); }
+});
 app.get("/api/layouts/:name", async (req, res) => {
     if (!safeName(req.params.name)) return res.status(400).json({ error: "nome non valido" });
     try { res.json(JSON.parse(await fsp.readFile(layoutPath(req.params.name), "utf8"))); }
     catch { res.status(404).json({ error: "layout non trovato" }); }
+});
+// Come sopra ma con gli elementi risolti allo stato ATTUALE (per le anteprime home).
+app.get("/api/layout-live/:name", async (req, res) => {
+    if (!safeName(req.params.name)) return res.status(400).json({ error: "nome non valido" });
+    try {
+        const layout = JSON.parse(await fsp.readFile(layoutPath(req.params.name), "utf8"));
+        const out = JSON.parse(JSON.stringify(layout));
+        await resolveElementsLive(out);
+        res.json(out);
+    } catch (e) { res.status(404).json({ error: "layout non trovato" }); }
 });
 app.put("/api/layouts/:name", async (req, res) => {
     if (!safeName(req.params.name)) return res.status(400).json({ error: "nome non valido" });
@@ -227,6 +471,67 @@ let lastRvSeen = 0;
 const RV_FILE = path.join(DATA, "renderer.json");
 try { const j = JSON.parse(fs.readFileSync(RV_FILE, "utf8")); lastRv = j.rv || ""; lastRvSeen = j.seen || 0; } catch (_) {}
 function persistRv() { try { fs.writeFileSync(RV_FILE, JSON.stringify({ rv: lastRv, seen: lastRvSeen })); } catch (_) {} }
+// Risolve gli elementi di un layout allo stato ATTUALE di HA: valori entita',
+// icone+colore, template renderizzati, colore condizionale. Modifica out.elements
+// in-place e lo ritorna. Usato sia da /active (citofono) sia dalle anteprime home.
+async function resolveElementsLive(out) {
+    const els = out.elements || [];
+    const ids = [...new Set(
+        els.filter(el => (el.type === "entity" || el.type === "entity-icon") && el.entity)
+           .map(el => el.entity)
+    )];
+    const attrsById = {};
+    for (const el of els) {
+        if (el.type === "entity" && el.entity && el.attribute) {
+            (attrsById[el.entity] = attrsById[el.entity] || []).push(el.attribute);
+        }
+    }
+    let data = {};
+    if (ids.length) { try { data = await fetchEntityData(ids, attrsById); } catch { data = {}; } }
+
+    for (const el of els) {
+        if (el.type === "entity" && el.entity) {
+            const d = data[el.entity];
+            if (d) {
+                let val, isNum;
+                if (el.attribute) {
+                    const av = d.at && (el.attribute in d.at) ? d.at[el.attribute] : null;
+                    val = (av === null || av === undefined) ? "?" : av;
+                    isNum = isFinite(parseFloat(av));
+                } else {
+                    val = (d.t !== undefined && d.t !== null) ? d.t : d.s;
+                    isNum = isFinite(parseFloat(d.s));
+                }
+                el.value = val;
+                if (el.dateFormat) el.value = formatDate(el.value, el.dateFormat, "it");
+                const autoUnit = (el.autoUnit === undefined) ? true : !!el.autoUnit;
+                if (autoUnit && d.u && !el.suffix && isNum) el.suffix = " " + d.u;
+            } else {
+                try { const s = await getState(el.entity); el.value = s.state; } catch { el.value = "?"; }
+            }
+        } else if (el.type === "entity-icon" && el.entity) {
+            const d = data[el.entity];
+            const name = (el.forceIcon && String(el.forceIcon).trim())
+                ? String(el.forceIcon).trim()
+                : iconForEntity(el.entity, d, MDI_NAMES);
+            const color = colorForEntity(el.entity, d, el);
+            el.type = "icon";
+            el.icon = name || "help-circle-outline";
+            el.color = color;
+            await applyConditionalColor(el);
+        } else if (el.type === "template") {
+            let out2 = "";
+            try { out2 = await renderTemplate(el.template || ""); } catch (e) { out2 = "⚠ " + String(e).slice(0, 100); }
+            el.value = markdownToHtml(out2);
+            el.rich = true;
+            await applyConditionalColor(el);
+        } else if (el.type === "icon") {
+            await applyConditionalColor(el);
+        }
+    }
+    return out;
+}
+
 app.get("/active", async (req, res) => {
     lastPoll = Date.now();
     const rvq = (req.query.rv || "").toString();
@@ -238,14 +543,35 @@ app.get("/active", async (req, res) => {
         if (!a.name) return res.json(base);
         const layout = JSON.parse(await fsp.readFile(layoutPath(a.name), "utf8"));
         const out = JSON.parse(JSON.stringify(layout));
-        for (const el of out.elements || []) {
-            if (el.type === "entity" && el.entity) {
-                try { const s = await getState(el.entity); el.value = s.state; } catch { el.value = "?"; }
-            }
-        }
+        await resolveElementsLive(out);
         out.showSeq = a.showSeq || 0;
         out.hideSeq = a.hideSeq || 0;
         out.duration = a.duration || 0;
+        out.name = a.name;
+        // Passa alla QML solo cio' che le serve dei pulsanti: presenza azione + toast.
+        // Il payload completo dell'azione resta sul server (eseguito da /api/action).
+        // Il testo del toast puo' contenere Jinja2 (es. "Luce {{ 'accesa' if is_state(...) }}"):
+        // in quel caso lo renderizziamo ad ogni poll, cosi' il messaggio e' dinamico.
+        if (layout.buttons && typeof layout.buttons === "object") {
+            const bout = {};
+            const entries = Object.entries(layout.buttons).filter(([, v]) => v);
+            await Promise.all(entries.map(async ([k, v]) => {
+                let toast = null;
+                if (v.toast && v.toast.text) {
+                    let text = v.toast.text;
+                    if (/\{\{|\{%/.test(text)) {
+                        try { text = await renderTemplate(text); } catch { /* lascia il testo originale */ }
+                    }
+                    toast = { text, seconds: v.toast.seconds || 2 };
+                }
+                bout[k] = {
+                    action: v.action ? true : false,
+                    toast,
+                    light: v.light ? true : false
+                };
+            }));
+            out.buttons = bout;
+        }
         res.json(out);
     } catch (e) { res.status(500).json({ error: String(e) }); }
 });

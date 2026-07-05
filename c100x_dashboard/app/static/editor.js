@@ -8,9 +8,24 @@ const I18N = {
     t_set_active: "Imposta come schermata mostrata sul citofono", t_duration: "durata in secondi (0 = resta)",
     show_now: "Mostra ora", t_show_now: "Mostra subito la scheda sul citofono", intercom: "Citofono",
     t_intercom: "Installa sul citofono via SSH", add: "Aggiungi", el_text: "Testo", el_entity: "Valore sensore",
-    el_image: "Immagine", el_icon: "Icona", el_rect: "Rettangolo", el_circle: "Cerchio", el_triangle: "Triangolo",
+    el_image: "Immagine", el_icon: "Icona", el_entity_icon: "Icona entità", el_rect: "Rettangolo", el_circle: "Cerchio", el_triangle: "Triangolo",
+    el_template: "Template", template_code: "Codice (Jinja2 + markdown)", template_hint: "Come una card markdown di Lovelace. Es: **Temp:** {{ states('sensor.temp') }}°C", template_preview: "Anteprima", template_refresh: "Aggiorna anteprima",
+    color_template: "Colore condizionale (Jinja2)", color_template_hint: "Opzionale. Può ritornare un colore (es. #ff0000) oppure true/false per usare i due colori sotto.", color_if_true: "Colore se vero", color_if_false: "Colore se falso",
+    icon_from_state: "L'icona e il colore seguono lo stato dell'entità (batteria, cover, ecc.)",
+    force_icon: "Forza icona (colore dallo stato)", force_icon_hint: "Vuoto = icona automatica. Se scegli un'icona, il colore continua a seguire lo stato.",
+    custom_colors: "Colori personalizzati (acceso/spento)", on_color: "Colore acceso", off_color: "Colore spento",
+    buttons_btn: "Pulsanti", t_buttons: "Configura i pulsanti del citofono per questa scheda",
+    bm_title: "Pulsanti del citofono", bm_pick: "Clicca un tasto sul citofono per configurarlo.",
+    bm_hint: "Clicca un tasto del citofono per assegnargli un'azione di Home Assistant. Le azioni valgono per questa scheda.",
+    bm_selhint: "Seleziona un tasto", bm_button: "Tasto", bm_service: "Azione (servizio)", bm_no_action: "Nessuna azione",
+    bm_yaml: "YAML", bm_target_entity: "Entità (target)", bm_data: "Dati (YAML)", bm_toast_text: "Testo a schermo (placeholder)",
+    bm_toast_secs: "Durata (s)", bm_toast_jinja: "Puoi usare Jinja2 per un testo dinamico (es. mostrare lo stato reale dopo un toggle).", bm_clear: "Rimuovi azione", bm_wheel_note: "Rotella: se assegni un'azione, non chiuderà più la scheda.",
+    bm_illuminate: "Illumina il tasto alla pressione",
+    bm_illuminate_note: "Se attivo, il LED del tasto si accende alla pressione. Attenzione: sui tasti con funzione nativa (es. serratura, occhio, o altri a seconda della configurazione) il citofono eseguirà ANCHE la funzione originale.",
+    bm_native_note: "Serratura/occhio hanno funzioni native: l'azione HA parte, ma la funzione originale potrebbe attivarsi comunque.",
+    bm_saved_hint: "Ricordati di salvare la scheda per applicare le modifiche ai pulsanti.",
     el_line: "Linea", el_arrow: "Freccia", background: "Sfondo", color: "Colore", grid: "Griglia",
-    snap: "Aggancia (10px)", palette_hint: "Trascina per spostare. Maniglia in basso a destra per ridimensionare. Canc per eliminare.",
+    snap: "Aggancia (10px)", palette_hint: "Trascina per spostare, maniglia per ridimensionare. Frecce: sposta (Shift = 10px). PagSu/PagGiù: sopra/sotto. Canc: elimina. Con più elementi selezionati, L/R/E/T/B/M per allineare.",
     properties: "Proprietà", select_element: "Seleziona un elemento sulla tela.",
     m_title: "Citofono — installazione via SSH",
     m_hint: "Carica la pagina sul citofono, applica la patch e riavvia. Richiede SSH attivo sul citofono. Viene salvato un backup di main.qml.",
@@ -20,6 +35,8 @@ const I18N = {
     m_savebtn: "Salva impostazioni", m_install: "Installa / aggiorna sul citofono", m_close: "Chiudi",
     ready: "Pronto.", pos_size: "Posizione e dimensione", rotation_deg: "Rotazione (°)", text: "Testo", entity: "Entità",
     ph_entity: "cerca un'entità…", read_value: "Leggi valore attuale", prefix: "Prefisso", suffix: "Suffisso",
+    attribute: "Attributo", attribute_state: "(stato)", attribute_hint: "Lascia \"(stato)\" per mostrare lo stato, oppure scegli/scrivi un attributo.", auto_unit: "Unità di misura automatica",
+    date_format: "Formato data/ora", date_format_hint: "Se il valore è una data/ora, formattala. Vuoto = non modificare. Es: DD/MM/YYYY, HH:mm, DD MMM YYYY HH:mm",
     decimals: "Decimali", image_url: "URL immagine", ph_image_url: "image/… o http://…", upload_image: "Carica immagine",
     gallery: "Galleria (caricate + HA)", icon: "Icona", ph_icon: "cerca… (MDI o in uso)", thickness: "Spessore (px)",
     hint_rotate_line: "Usa la rotazione per inclinare la linea.", hint_rotate_arrow: "Usa la rotazione per inclinare la freccia.",
@@ -27,7 +44,7 @@ const I18N = {
     alignment: "Allineamento", align_left: "Sinistra", align_center: "Centro", align_right: "Destra", in_use: "in uso",
     added: "Aggiunto: {0}", deleted: "Elemento eliminato.", name_invalid: "Nome non valido (lettere, numeri, spazi, - _ ; max 40).",
     saved: "Salvato: {0}", save_error: "Errore nel salvataggio.", loaded: "Caricato: {0}", load_error: "Impossibile caricare.",
-    layout_deleted: "Eliminato: {0}", new_layout: "Nuovo layout.", confirm_delete: 'Eliminare il layout "{0}"?',
+    layout_deleted: "Eliminato: {0}", new_layout: "Nuovo layout.", export_btn: "Esporta backup", import_btn: "Importa backup", exported: "Backup esportato.", imported: "Importate {0} schede ({1} saltate).", import_overwrite: "Alcune schede esistono già. Sovrascriverle?", import_err: "Backup non valido.", confirm_delete: 'Eliminare il layout "{0}"?',
     confirm_new: "Creare un nuovo layout? Le modifiche non salvate andranno perse.", active_set: '"{0}" è ora la schermata attiva sul citofono.',
     active_error: "Errore nell'impostare l'attiva.", ask_save_first: "Salva o carica prima un layout.",
     shown: 'Scheda "{0}" mostrata sul citofono (resta finché non cambi).', shown_dur: 'Scheda "{0}" mostrata sul citofono per {1}s.',
@@ -44,9 +61,24 @@ const I18N = {
     t_set_active: "Set as the screen shown on the intercom", t_duration: "duration in seconds (0 = stays)",
     show_now: "Show now", t_show_now: "Show the card on the intercom now", intercom: "Intercom",
     t_intercom: "Install on the intercom via SSH", add: "Add", el_text: "Text", el_entity: "Sensor value",
-    el_image: "Image", el_icon: "Icon", el_rect: "Rectangle", el_circle: "Circle", el_triangle: "Triangle",
+    el_image: "Image", el_icon: "Icon", el_entity_icon: "Entity icon", el_rect: "Rectangle", el_circle: "Circle", el_triangle: "Triangle",
+    el_template: "Template", template_code: "Code (Jinja2 + markdown)", template_hint: "Like a Lovelace markdown card. E.g: **Temp:** {{ states('sensor.temp') }}°C", template_preview: "Preview", template_refresh: "Refresh preview",
+    color_template: "Conditional color (Jinja2)", color_template_hint: "Optional. Can return a color (e.g. #ff0000) or true/false to use the two colors below.", color_if_true: "Color if true", color_if_false: "Color if false",
+    icon_from_state: "Icon and color follow the entity state (battery, cover, etc.)",
+    force_icon: "Force icon (color from state)", force_icon_hint: "Empty = automatic icon. If you pick an icon, the color still follows the state.",
+    custom_colors: "Custom colors (on/off)", on_color: "On color", off_color: "Off color",
+    buttons_btn: "Buttons", t_buttons: "Configure the intercom buttons for this card",
+    bm_title: "Intercom buttons", bm_pick: "Click a button on the intercom to configure it.",
+    bm_hint: "Click an intercom button to assign a Home Assistant action. Actions apply to this card.",
+    bm_selhint: "Select a button", bm_button: "Button", bm_service: "Action (service)", bm_no_action: "No action",
+    bm_yaml: "YAML", bm_target_entity: "Entity (target)", bm_data: "Data (YAML)", bm_toast_text: "On-screen text (placeholder)",
+    bm_toast_secs: "Duration (s)", bm_toast_jinja: "You can use Jinja2 for dynamic text (e.g. show the real state after a toggle).", bm_clear: "Remove action", bm_wheel_note: "Wheel: if you assign an action, it will no longer close the card.",
+    bm_illuminate: "Illuminate the button on press",
+    bm_illuminate_note: "If enabled, the button LED lights up on press. Warning: on buttons with a native function (e.g. lock, eye, or others depending on configuration) the intercom will ALSO run the original function.",
+    bm_native_note: "Lock/eye have native functions: the HA action fires, but the original function may still trigger.",
+    bm_saved_hint: "Remember to save the card to apply button changes.",
     el_line: "Line", el_arrow: "Arrow", background: "Background", color: "Color", grid: "Grid",
-    snap: "Snap (10px)", palette_hint: "Drag to move. Bottom-right handle to resize. Del to remove.",
+    snap: "Snap (10px)", palette_hint: "Drag to move, handle to resize. Arrows: move (Shift = 10px). PgUp/PgDn: forward/back. Del: remove. With multiple selected, L/R/E/T/B/M to align.",
     properties: "Properties", select_element: "Select an element on the canvas.",
     m_title: "Intercom — install via SSH",
     m_hint: "Uploads the page to the intercom, patches it and reboots. Requires SSH enabled on the intercom. A backup of main.qml is saved.",
@@ -56,6 +88,8 @@ const I18N = {
     m_savebtn: "Save settings", m_install: "Install / update on the intercom", m_close: "Close",
     ready: "Ready.", pos_size: "Position and size", rotation_deg: "Rotation (°)", text: "Text", entity: "Entity",
     ph_entity: "search an entity…", read_value: "Read current value", prefix: "Prefix", suffix: "Suffix",
+    attribute: "Attribute", attribute_state: "(state)", attribute_hint: "Leave \"(state)\" to show the state, or pick/type an attribute.", auto_unit: "Automatic unit of measurement",
+    date_format: "Date/time format", date_format_hint: "If the value is a date/time, format it. Empty = leave as is. E.g: DD/MM/YYYY, HH:mm, DD MMM YYYY HH:mm",
     decimals: "Decimals", image_url: "Image URL", ph_image_url: "image/… or http://…", upload_image: "Upload image",
     gallery: "Gallery (uploaded + HA)", icon: "Icon", ph_icon: "search… (MDI or in use)", thickness: "Thickness (px)",
     hint_rotate_line: "Use rotation to tilt the line.", hint_rotate_arrow: "Use rotation to tilt the arrow.",
@@ -63,7 +97,7 @@ const I18N = {
     alignment: "Alignment", align_left: "Left", align_center: "Center", align_right: "Right", in_use: "in use",
     added: "Added: {0}", deleted: "Element deleted.", name_invalid: "Invalid name (letters, numbers, spaces, - _ ; max 40).",
     saved: "Saved: {0}", save_error: "Save failed.", loaded: "Loaded: {0}", load_error: "Could not load.",
-    layout_deleted: "Deleted: {0}", new_layout: "New layout.", confirm_delete: 'Delete layout "{0}"?',
+    layout_deleted: "Deleted: {0}", new_layout: "New layout.", export_btn: "Export backup", import_btn: "Import backup", exported: "Backup exported.", imported: "Imported {0} layouts ({1} skipped).", import_overwrite: "Some layouts already exist. Overwrite them?", import_err: "Invalid backup.", confirm_delete: 'Delete layout "{0}"?',
     confirm_new: "Create a new layout? Unsaved changes will be lost.", active_set: '"{0}" is now the active screen on the intercom.',
     active_error: "Could not set the active layout.", ask_save_first: "Save or load a layout first.",
     shown: 'Card "{0}" shown on the intercom (stays until changed).', shown_dur: 'Card "{0}" shown on the intercom for {1}s.',
@@ -84,7 +118,7 @@ Object.assign(I18N.it, {
   alignLeft: "Allinea a sinistra", alignCenterH: "Centra orizzontalmente", alignRight: "Allinea a destra",
   alignTop: "Allinea in alto", alignMiddleV: "Centra verticalmente", alignBottom: "Allinea in basso",
   distributeH: "Distribuisci in orizzontale", distributeV: "Distribuisci in verticale",
-  copy_sel: "Copia selezione", delete_sel: "Elimina {0} elementi",
+  copy_sel: "Copia selezione", z_forward: "Portato sopra", z_backward: "Portato sotto", z_front: "Sopra", z_back: "Sotto", grouped: "Raggruppati", ungrouped: "Separati", group: "Raggruppa", ungroup: "Separa", delete_sel: "Elimina {0} elementi",
   copied: "Copiati {0} elementi.", pasted: "Incollati {0} elementi.",
   cito_online: "Citofono online", cito_offline: "Citofono non raggiunto", cito_showing: "Mostra: {0}"
 });
@@ -96,7 +130,7 @@ Object.assign(I18N.en, {
   alignLeft: "Align left", alignCenterH: "Center horizontally", alignRight: "Align right",
   alignTop: "Align top", alignMiddleV: "Center vertically", alignBottom: "Align bottom",
   distributeH: "Distribute horizontally", distributeV: "Distribute vertically",
-  copy_sel: "Copy selection", delete_sel: "Delete {0} elements",
+  copy_sel: "Copy selection", z_forward: "Brought forward", z_backward: "Sent backward", z_front: "Forward", z_back: "Backward", grouped: "Grouped", ungrouped: "Ungrouped", group: "Group", ungroup: "Ungroup", delete_sel: "Delete {0} elements",
   copied: "Copied {0} elements.", pasted: "Pasted {0} elements.",
   cito_online: "Intercom online", cito_offline: "Intercom not reached", cito_showing: "Showing: {0}"
 });
@@ -125,16 +159,18 @@ let scale = 1;
 let ENTITIES = [];
 let ENTITY_ICONS = [];
 
-function newLayout() { return { name: "", background: "#000000", elements: [] }; }
+function newLayout() { return { name: "", background: "#000000", elements: [], buttons: {} }; }
 function uid() { return "el_" + Math.random().toString(36).slice(2, 8); }
 
 function defaultsFor(type) {
   const base = { id: uid(), type, x: 40, y: 40, w: 200, h: 60, rotation: 0 };
   switch (type) {
     case "text":     return { ...base, text: "Testo", fontSize: 32, color: "#ffffff", bold: true, align: "left" };
-    case "entity":   return { ...base, entity: "", prefix: "", suffix: "", decimals: 0, fontSize: 40, color: "#ffffff", bold: true, align: "left" };
+    case "entity":   return { ...base, entity: "", attribute: "", autoUnit: true, dateFormat: "", prefix: "", suffix: "", decimals: 0, fontSize: 40, color: "#ffffff", bold: true, align: "left" };
+    case "entity-icon": return { ...base, entity: "", forceIcon: "", icon: "help-circle-outline", color: "#ffffff", customColors: false, onColor: "#ffc107", offColor: "#9e9e9e", colorTemplate: "", colorTrue: "#4caf50", colorFalse: "#f44336", w: 80, h: 80 };
+    case "template": return { ...base, template: "**Info:** {{ states('sun.sun') }}", colorTemplate: "", colorTrue: "#4caf50", colorFalse: "#f44336", fontSize: 28, color: "#ffffff", bold: false, align: "left", w: 300, h: 100 };
     case "image":    return { ...base, url: "", w: 160, h: 120 };
-    case "icon":     return { ...base, icon: "information-outline", color: "#ffffff", w: 80, h: 80 };
+    case "icon":     return { ...base, icon: "information-outline", color: "#ffffff", colorTemplate: "", colorTrue: "#4caf50", colorFalse: "#f44336", w: 80, h: 80 };
     case "rect":     return { ...base, fill: "#f2a93b" };
     case "circle":   return { ...base, w: 120, h: 120, fill: "#f2a93b" };
     case "triangle": return { ...base, w: 120, h: 120, fill: "#f2a93b" };
@@ -157,19 +193,88 @@ const snapChk = document.getElementById("snap");
 function setStatus(m) { statusMsg.textContent = m; }
 function snap(v) { return snapChk.checked ? Math.round(v / GRID) * GRID : Math.round(v); }
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+// Ingombro reale (bounding box allineato agli assi) di un elemento eventualmente
+// ruotato. Serve per i limiti ai bordi: un rettangolo ruotato "sporge" oltre le
+// sue w/h nominali, quindi il clamp deve usare queste dimensioni effettive.
+function aabb(w, h, rotationDeg) {
+    const r = ((rotationDeg || 0) * Math.PI) / 180;
+    const c = Math.abs(Math.cos(r)), s = Math.abs(Math.sin(r));
+    return { w: w * c + h * s, h: w * s + h * c };
+}
+// Riporta l'elemento dentro i bordi tenendo conto del bounding box ruotato.
+function clampToBounds(el, node) {
+    const bb = aabb(el.w, el.h, el.rotation);
+    const halfExW = (bb.w - el.w) / 2, halfExH = (bb.h - el.h) / 2;
+    el.x = clamp(el.x, -halfExW, SCREEN_W - el.w + halfExW);
+    el.y = clamp(el.y, -halfExH, SCREEN_H - el.h + halfExH);
+    if (node) { node.style.left = el.x + "px"; node.style.top = el.y + "px"; }
+}
 function selected() { return layout.elements.find(e => e.id === selectedId) || null; }
 function nodeById(id) { return screenEl.querySelector('.el[data-id="' + id + '"]'); }
 function iconUrl(name, color) { return "icon/" + encodeURIComponent(name) + "?color=" + encodeURIComponent(String(color || "#ffffff").replace("#", "")); }
 
+let userZoom = 1;   // zoom applicato dall'utente (rotellina), 1 = fit
+let panX = 0, panY = 0; // pan (clic centrale)
+let baseScale = 1;  // scale di fit calcolato, senza userZoom
+
 function fitScale() {
-  const avail = stageArea.clientWidth - 40;
-  scale = Math.min(1, avail / SCREEN_W);
-  stageWrap.style.transform = `scale(${scale})`;
-  stageWrap.style.width = SCREEN_W + "px";
-  stageWrap.style.height = SCREEN_H + "px";
-  stageWrap.style.marginBottom = (SCREEN_H * (1 - scale)) * -1 + "px";
+  // Il contenuto reale da adattare è la scocca del citofono, non il solo canvas.
+  const shell = document.getElementById("citoShell");
+  const contentW = shell ? shell.offsetWidth : SCREEN_W;
+  const contentH = shell ? shell.offsetHeight : SCREEN_H;
+  // margine attorno: usiamo ~90% dello spazio disponibile così resta del bordo.
+  const availW = (stageArea.clientWidth - 32) * 0.9;
+  const availH = (stageArea.clientHeight - 32) * 0.9;
+  baseScale = Math.min(1, availW / contentW, availH / contentH);
+  scale = baseScale * userZoom; // scale totale usato dalle coordinate mouse
+  stageWrap.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  stageWrap.style.transformOrigin = "top center";
+  stageWrap.style.width = contentW + "px";
+  stageWrap.style.height = contentH + "px";
+  stageWrap.style.marginLeft = "auto";
+  stageWrap.style.marginRight = "auto";
+  stageWrap.style.marginBottom = (contentH * (1 - scale)) * -1 + "px";
 }
 window.addEventListener("resize", fitScale);
+
+// Zoom con la rotellina (Ctrl+wheel o wheel semplice sullo stage).
+function setZoom(factor, centerClient) {
+  const prev = userZoom;
+  userZoom = clamp(userZoom * factor, 0.3, 4);
+  if (userZoom === prev) return;
+  fitScale();
+  setStatus(Math.round(userZoom * 100) + "%");
+}
+function resetZoom() { userZoom = 1; panX = 0; panY = 0; fitScale(); }
+
+// Zoom con la rotellina sullo stage (senza modificatori: zoom diretto).
+stageArea.addEventListener("wheel", (e) => {
+  // solo se si sta sopra l'area di editing
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : (1 / 1.1);
+  setZoom(factor, { x: e.clientX, y: e.clientY });
+}, { passive: false });
+
+// Pan con il tasto centrale del mouse (trascina la vista).
+let panning = false, panStart = null;
+stageArea.addEventListener("mousedown", (e) => {
+  if (e.button !== 1) return; // solo tasto centrale
+  e.preventDefault();
+  panning = true;
+  panStart = { x: e.clientX - panX, y: e.clientY - panY };
+  stageArea.style.cursor = "grabbing";
+});
+window.addEventListener("mousemove", (e) => {
+  if (!panning) return;
+  panX = e.clientX - panStart.x;
+  panY = e.clientY - panStart.y;
+  fitScale();
+});
+window.addEventListener("mouseup", (e) => {
+  if (e.button === 1 && panning) { panning = false; stageArea.style.cursor = ""; }
+});
+// doppio clic col centrale: reset zoom/pan
+stageArea.addEventListener("auxclick", (e) => { if (e.button === 1 && e.detail === 2) resetZoom(); });
 
 function render() {
   screenEl.style.background = layout.background || "#000";
@@ -195,10 +300,17 @@ function positionNode(d, el) {
 function paintVisual(d, el) {
   if (el.type === "text" || el.type === "entity") {
     const t2 = document.createElement("div"); t2.className = "el-text"; applyTextStyle(t2, el); t2.textContent = displayText(el); d.appendChild(t2);
+  } else if (el.type === "template") {
+    const t2 = document.createElement("div"); t2.className = "el-text"; applyTextStyle(t2, el);
+    // mostra l'anteprima HTML se disponibile, altrimenti il codice grezzo
+    if (el._previewHtml) t2.innerHTML = el._previewHtml;
+    else t2.textContent = el.template || "";
+    d.appendChild(t2);
   } else if (el.type === "image") {
     if (el.url) { const img = document.createElement("img"); img.className = "el-img"; img.src = el.url; d.appendChild(img); } else d.appendChild(ph(t("el_image")));
-  } else if (el.type === "icon") {
-    if (el.icon) { const img = document.createElement("img"); img.className = "el-img"; img.src = iconUrl(el.icon, el.color); d.appendChild(img); } else d.appendChild(ph(t("el_icon")));
+  } else if (el.type === "icon" || el.type === "entity-icon") {
+    const icoColor = (el.type === "entity-icon" || el.type === "icon") ? (el._previewColor || el.color) : el.color;
+    if (el.icon) { const img = document.createElement("img"); img.className = "el-img"; img.src = iconUrl(el.icon, icoColor); d.appendChild(img); } else d.appendChild(ph(t(el.type === "entity-icon" ? "el_entity_icon" : "el_icon")));
   } else if (el.type === "rect" || el.type === "circle" || el.type === "triangle") {
     const s = document.createElement("div"); s.className = "el-shape"; s.style.background = el.fill;
     if (el.type === "circle") s.style.borderRadius = "50%";
@@ -236,14 +348,46 @@ function buildThumbNode(el) {
 }
 function ph(label) { const p = document.createElement("div"); p.className = "el-shape el-ph"; p.textContent = label; return p; }
 
+const _MONTHS_IT = ["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+const _DAYS_IT = ["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
+function formatDateJS(value, pattern) {
+  if (!pattern || value == null || value === "") return value;
+  const str = String(value);
+  if (/^-?\d+(\.\d+)?$/.test(str.trim())) return value; // numero puro: non è una data
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return value;
+  const pad = (n, l = 2) => String(n).padStart(l, "0");
+  const map = {
+    YYYY: d.getFullYear(), YY: pad(d.getFullYear() % 100),
+    MMMM: _MONTHS_IT[d.getMonth()], MMM: _MONTHS_IT[d.getMonth()].slice(0, 3),
+    MM: pad(d.getMonth() + 1), M: d.getMonth() + 1,
+    dddd: _DAYS_IT[d.getDay()], ddd: _DAYS_IT[d.getDay()].slice(0, 3),
+    DD: pad(d.getDate()), D: d.getDate(),
+    HH: pad(d.getHours()), H: d.getHours(),
+    mm: pad(d.getMinutes()), m: d.getMinutes(),
+    ss: pad(d.getSeconds()), s: d.getSeconds(),
+  };
+  const tokens = Object.keys(map).sort((a, b) => b.length - a.length);
+  const holders = []; let out = pattern;
+  tokens.forEach((tk) => { out = out.replace(new RegExp(tk, "g"), () => { holders.push(String(map[tk])); return "\u0000" + (holders.length - 1) + "\u0000"; }); });
+  return out.replace(/\u0000(\d+)\u0000/g, (_, i) => holders[Number(i)]);
+}
+
 function displayText(el) {
   if (el.type === "text") return el.text || "";
   let v = (el._preview !== undefined && el._preview !== null) ? el._preview : "—";
+  // formattazione data/ora se richiesta (prima della formattazione numerica)
+  if (el.dateFormat) {
+    const fd = formatDateJS(v, el.dateFormat);
+    if (fd !== v) { return (el.prefix || "") + fd + (el.suffix || el._previewSuffix || ""); }
+  }
   if (!isNaN(parseFloat(v)) && isFinite(v)) v = parseFloat(v).toFixed(el.decimals || 0);
-  return (el.prefix || "") + v + (el.suffix || "");
+  // Suffisso: quello manuale ha la precedenza; altrimenti l'unita' automatica (come nel /active).
+  const suf = el.suffix || el._previewSuffix || "";
+  return (el.prefix || "") + v + suf;
 }
 
-const COMPLEX = new Set(["image", "icon", "line", "arrow"]);
+const COMPLEX = new Set(["image", "icon", "entity-icon", "line", "arrow"]);
 function refreshSelectedNode() {
   const el = selected(); if (!el) return;
   let node = nodeById(el.id); if (!node) { render(); return; }
@@ -253,6 +397,7 @@ function refreshSelectedNode() {
   node.style.transform = el.rotation ? "rotate(" + el.rotation + "deg)" : "";
   const inner = node.firstChild;
   if (el.type === "text" || el.type === "entity") { applyTextStyle(inner, el); inner.textContent = displayText(el); }
+  else if (el.type === "template") { applyTextStyle(inner, el); if (el._previewHtml) inner.innerHTML = el._previewHtml; else inner.textContent = el.template || ""; }
   else if (el.type === "rect" || el.type === "circle" || el.type === "triangle") inner.style.background = el.fill;
 }
 
@@ -304,6 +449,7 @@ function onElementPointerDown(e, el, node, handle, rotHandle) {
       a = ((a % 360) + 360) % 360; if (a > 180) a -= 360;
       el.rotation = a; node.style.transform = "rotate(" + a + "deg)";
       const rf = document.getElementById("p_rot"); if (rf) rf.value = a;
+      clampToBounds(el, node); // l'ingombro è cambiato: riporta l'elemento dentro i bordi
       return;
     }
     const dx = (pending.mx - startMX) / scale, dy = (pending.my - startMY) / scale;
@@ -326,15 +472,21 @@ function onElementPointerDown(e, el, node, handle, rotHandle) {
       }
       return;
     }
-    let nx = clamp(snap(start.x + dx), 0, SCREEN_W - el.w);
-    let ny = clamp(snap(start.y + dy), 0, SCREEN_H - el.h);
+    // Limiti ai bordi calcolati sull'ingombro REALE (bounding box ruotato).
+    // La rotazione CSS è attorno al centro, quindi vincoliamo il centro dell'elemento
+    // a restare dentro lo schermo tenendo conto di metà bounding box.
+    const bb = aabb(el.w, el.h, el.rotation);
+    const halfExW = (bb.w - el.w) / 2;  // quanto sporge oltre w per lato
+    const halfExH = (bb.h - el.h) / 2;
+    let nx = clamp(snap(start.x + dx), -halfExW, SCREEN_W - el.w + halfExW);
+    let ny = clamp(snap(start.y + dy), -halfExH, SCREEN_H - el.h + halfExH);
     const TOL = 6;
     let bx = { d: TOL + 1 };
     [[0], [el.w / 2], [el.w]].forEach(([off]) => { const a = nx + off; for (const tg of xT) { const dd = Math.abs(a - tg.p); if (dd < bx.d) bx = { d: dd, off, t: tg }; } });
-    let gv = null; if (bx.t) { nx = clamp(bx.t.p - bx.off, 0, SCREEN_W - el.w); gv = bx.t; }
+    let gv = null; if (bx.t) { nx = clamp(bx.t.p - bx.off, -halfExW, SCREEN_W - el.w + halfExW); gv = bx.t; }
     let by = { d: TOL + 1 };
     [[0], [el.h / 2], [el.h]].forEach(([off]) => { const a = ny + off; for (const tg of yT) { const dd = Math.abs(a - tg.p); if (dd < by.d) by = { d: dd, off, t: tg }; } });
-    let gh = null; if (by.t) { ny = clamp(by.t.p - by.off, 0, SCREEN_H - el.h); gh = by.t; }
+    let gh = null; if (by.t) { ny = clamp(by.t.p - by.off, -halfExH, SCREEN_H - el.h + halfExH); gh = by.t; }
     el.x = nx; el.y = ny;
     node.style.left = nx + "px"; node.style.top = ny + "px";
     if (gv) showGuide("v", gv.p, gv.k); else if (guideV) guideV.style.display = "none";
@@ -383,15 +535,62 @@ document.addEventListener("keydown", (e) => {
   else if (mod && (e.key === "v" || e.key === "V")) { e.preventDefault(); pasteClipboard(); }
   else if (mod && (e.key === "d" || e.key === "D")) { e.preventDefault(); copySelection(); pasteClipboard(); }
   else if (mod && (e.key === "a" || e.key === "A")) { e.preventDefault(); selectAll(); }
+  else if (mod && e.shiftKey && (e.key === "g" || e.key === "G")) { e.preventDefault(); ungroupSelected(); }
+  else if (mod && (e.key === "g" || e.key === "G")) { e.preventDefault(); groupSelected(); }
   else if (e.key === "Escape") { selectElement(null); }
+  // Spostamento con le frecce: 1px, con Shift 10px.
+  else if (selectedIds.size && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 1;
+    if (e.key === "ArrowLeft") moveSelected(-step, 0);
+    else if (e.key === "ArrowRight") moveSelected(step, 0);
+    else if (e.key === "ArrowUp") moveSelected(0, -step);
+    else if (e.key === "ArrowDown") moveSelected(0, step);
+  }
+  // z-order: PagUp = porta sopra, PagDown = porta sotto.
+  else if (selectedIds.size && e.key === "PageUp") { e.preventDefault(); bringForward(); }
+  else if (selectedIds.size && e.key === "PageDown") { e.preventDefault(); sendBackward(); }
+  // Allineamento (richiede selezione multipla): scorciatoie a lettera singola.
+  else if (selectedIds.size > 1 && !mod) {
+    const k = e.key.toLowerCase();
+    const map = { l: "alignLeft", r: "alignRight", e: "alignCenterH", t: "alignTop", b: "alignBottom", m: "alignMiddleV" };
+    if (map[k]) { e.preventDefault(); ALIGN[map[k]](); }
+  }
 });
 
+function elementsInGroup(gid) {
+  return gid ? layout.elements.filter(e => e.groupId === gid).map(e => e.id) : [];
+}
+// Raggruppa gli elementi selezionati (assegna un groupId comune).
+function groupSelected() {
+  if (selectedIds.size < 2) return;
+  const gid = "g" + uid();
+  layout.elements.forEach(e => { if (selectedIds.has(e.id)) e.groupId = gid; });
+  render(); renderProps(); setStatus(t("grouped"));
+}
+// Separa: rimuove il groupId dagli elementi selezionati.
+function ungroupSelected() {
+  let any = false;
+  layout.elements.forEach(e => { if (selectedIds.has(e.id) && e.groupId) { delete e.groupId; any = true; } });
+  if (any) { render(); renderProps(); setStatus(t("ungrouped")); }
+}
 function selectElement(id, additive) {
+  if (id != null && btnSelected !== null) {
+    // selezionare un elemento del canvas annulla la selezione di un tasto della scocca
+    btnSelected = null;
+    if (typeof refreshFaceplate === "function") refreshFaceplate();
+  }
   if (id == null) { selectedIds.clear(); selectedId = null; }
-  else if (additive) {
-    if (selectedIds.has(id)) { selectedIds.delete(id); if (selectedId === id) selectedId = [...selectedIds].slice(-1)[0] || null; }
-    else { selectedIds.add(id); selectedId = id; }
-  } else { selectedIds = new Set([id]); selectedId = id; }
+  else {
+    // se l'elemento appartiene a un gruppo, la selezione include tutti i membri.
+    const el0 = layout.elements.find(e => e.id === id);
+    const groupIds = (el0 && el0.groupId) ? elementsInGroup(el0.groupId) : [id];
+    if (additive) {
+      const allIn = groupIds.every(g => selectedIds.has(g));
+      if (allIn) { groupIds.forEach(g => selectedIds.delete(g)); if (groupIds.includes(selectedId)) selectedId = [...selectedIds].slice(-1)[0] || null; }
+      else { groupIds.forEach(g => selectedIds.add(g)); selectedId = id; }
+    } else { selectedIds = new Set(groupIds); selectedId = id; }
+  }
   screenEl.classList.toggle("multi", selectedIds.size > 1);
   screenEl.querySelectorAll(".el").forEach(n => n.classList.toggle("selected", selectedIds.has(n.dataset.id)));
   renderProps();
@@ -408,6 +607,34 @@ function deleteSelected() {
   if (!selectedIds.size) return;
   layout.elements = layout.elements.filter(e => !selectedIds.has(e.id));
   selectedIds.clear(); selectedId = null; render(); renderProps(); setStatus(t("deleted"));
+}
+// z-order: l'ordine nell'array elements = ordine di disegno (ultimo = sopra).
+function bringForward() {
+  const l = layout.elements;
+  // sposta gli elementi selezionati di una posizione verso la fine (sopra)
+  for (let i = l.length - 2; i >= 0; i--) {
+    if (selectedIds.has(l[i].id) && !selectedIds.has(l[i + 1].id)) {
+      [l[i], l[i + 1]] = [l[i + 1], l[i]];
+    }
+  }
+  render(); setStatus(t("z_forward"));
+}
+function sendBackward() {
+  const l = layout.elements;
+  for (let i = 1; i < l.length; i++) {
+    if (selectedIds.has(l[i].id) && !selectedIds.has(l[i - 1].id)) {
+      [l[i], l[i - 1]] = [l[i - 1], l[i]];
+    }
+  }
+  render(); setStatus(t("z_backward"));
+}
+function moveSelected(dx, dy) {
+  const l = selectedList(); if (!l.length) return;
+  l.forEach(o => {
+    o.x = clamp((o.x || 0) + dx, 0, SCREEN_W - (o.w || 0));
+    o.y = clamp((o.y || 0) + dy, 0, SCREEN_H - (o.h || 0));
+  });
+  render();
 }
 function copySelection() {
   const list = selectedList(); if (!list.length) return;
@@ -444,8 +671,33 @@ function renderProps() {
     html += field(t("entity"), `<div class="ta-wrap"><input id="p_entity" type="text" placeholder="${t("ph_entity")}" value="${escapeHtml(el.entity)}" autocomplete="off"></div>`);
     html += `<button id="p_read" style="width:100%;margin-bottom:.5rem">${t("read_value")}</button>`;
     html += `<div class="prop-preview" id="p_preview">${escapeHtml(displayText(el))}</div>`;
+    // Attributo: input con datalist (tendina se disponibili, altrimenti campo libero)
+    html += field(t("attribute"), `<input id="p_attribute" list="p_attrlist" type="text" value="${escapeHtml(el.attribute || "")}" placeholder="${t("attribute_state")}" autocomplete="off"><datalist id="p_attrlist"></datalist>`);
+    html += `<p class="hint" style="margin-top:-.3rem">${t("attribute_hint")}</p>`;
+    html += `<label class="row checkbox" style="margin:.3rem 0"><input id="p_autounit" type="checkbox" ${(el.autoUnit === undefined || el.autoUnit) ? "checked" : ""}> <span>${t("auto_unit")}</span></label>`;
+    html += field(t("date_format"), `<input id="p_dateformat" type="text" value="${escapeHtml(el.dateFormat || "")}" placeholder="DD/MM/YYYY HH:mm" autocomplete="off">`);
+    html += `<p class="hint" style="margin-top:-.3rem">${t("date_format_hint")}</p>`;
     html += `<div class="field inline"><div>${field(t("prefix"), `<input id="p_prefix" type="text" value="${escapeHtml(el.prefix)}">`)}</div><div>${field(t("suffix"), `<input id="p_suffix" type="text" value="${escapeHtml(el.suffix)}">`)}</div></div>`;
     html += field(t("decimals"), `<input id="p_decimals" type="number" min="0" max="4" value="${el.decimals || 0}">`) + textStyleFields(el);
+  } else if (el.type === "template") {
+    html += field(t("template_code"), `<textarea id="p_template" rows="5" style="width:100%;font-family:monospace;font-size:12px" placeholder="{{ states('sensor.x') }}">${escapeHtml(el.template || "")}</textarea>`);
+    html += `<p class="hint" style="margin-top:-.3rem">${t("template_hint")}</p>`;
+    html += `<button id="p_tpl_refresh" style="width:100%;margin-bottom:.5rem">${t("template_refresh")}</button>`;
+    html += `<div class="prop-preview" id="p_tpl_preview">${el._previewHtml || escapeHtml(el.template || "")}</div>`;
+    html += condColorFields(el);
+    html += textStyleFields(el);
+  } else if (el.type === "entity-icon") {
+    html += field(t("entity"), `<div class="ta-wrap"><input id="p_entity" type="text" placeholder="${t("ph_entity")}" value="${escapeHtml(el.entity)}" autocomplete="off"></div>`);
+    html += `<button id="p_read" style="width:100%;margin-bottom:.5rem">${t("read_value")}</button>`;
+    html += field(t("color"), `<input id="p_color2" type="color" value="${el.color}">`);
+    html += `<div class="toggle-row"><label><input id="p_customcol" type="checkbox" ${el.customColors ? "checked" : ""}> ${t("custom_colors")}</label></div>`;
+    if (el.customColors) {
+      html += `<div class="field inline"><div>${field(t("on_color"), `<input id="p_oncolor" type="color" value="${el.onColor || "#ffc107"}">`)}</div><div>${field(t("off_color"), `<input id="p_offcolor" type="color" value="${el.offColor || "#9e9e9e"}">`)}</div></div>`;
+    }
+    html += `<p class="hint">${t("icon_from_state")}</p>`;
+    html += field(t("force_icon"), `<div class="ta-wrap"><input id="p_forceicon" type="text" placeholder="${t("ph_icon")}" value="${escapeHtml(el.forceIcon || "")}" autocomplete="off"></div>`);
+    html += `<p class="hint" style="margin-top:-.3rem">${t("force_icon_hint")}</p>`;
+    html += condColorFields(el);
   } else if (el.type === "image") {
     html += field(t("image_url"), `<input id="p_url" type="text" placeholder="${t("ph_image_url")}" value="${escapeHtml(el.url)}">`);
     html += `<label class="upload-btn">${t("upload_image")}<input id="p_file" type="file" accept="image/*" hidden></label>`;
@@ -454,6 +706,7 @@ function renderProps() {
   } else if (el.type === "icon") {
     html += field(t("icon"), `<div class="ta-wrap"><input id="p_icon" type="text" placeholder="${t("ph_icon")}" value="${escapeHtml(el.icon)}" autocomplete="off"></div>`);
     html += field(t("color"), `<input id="p_color2" type="color" value="${el.color}">`);
+    html += condColorFields(el);
   } else if (el.type === "rect" || el.type === "circle" || el.type === "triangle") {
     html += field(t("color"), `<input id="p_fill" type="color" value="${el.fill}">`);
   } else if (el.type === "line" || el.type === "arrow") {
@@ -462,6 +715,7 @@ function renderProps() {
     html += `<p class="hint">${el.type === "arrow" ? t("hint_rotate_arrow") : t("hint_rotate_line")}</p>`;
   }
 
+  html += `<div class="field inline" style="margin-top:.4rem"><div><button id="p_zfront" style="width:100%">▲ ${t("z_front")}</button></div><div><button id="p_zback" style="width:100%">▼ ${t("z_back")}</button></div></div>`;
   html += `<button class="danger" id="p_delete">${t("delete_element")}</button>`;
   propsBody.innerHTML = html;
   wireProps(el);
@@ -473,6 +727,22 @@ function textStyleFields(el) {
     + field(t("text_color"), `<input id="p_color" type="color" value="${el.color}">`)
     + `<div class="toggle-row"><label><input id="p_bold" type="checkbox" ${el.bold ? "checked" : ""}> ${t("bold")}</label></div>`
     + field(t("alignment"), `<select id="p_align"><option value="left" ${el.align==="left"?"selected":""}>${t("align_left")}</option><option value="center" ${el.align==="center"?"selected":""}>${t("align_center")}</option><option value="right" ${el.align==="right"?"selected":""}>${t("align_right")}</option></select>`);
+}
+
+// Campi colore condizionale (Jinja2), riutilizzabili per template, icona e icona entità.
+function condColorFields(el) {
+  return field(t("color_template"), `<input id="p_colortpl" type="text" value="${escapeHtml(el.colorTemplate || "")}" placeholder="{{ is_state('...','on') }}" autocomplete="off">`)
+    + `<p class="hint" style="margin-top:-.3rem">${t("color_template_hint")}</p>`
+    + `<div class="field inline"><div>${field(t("color_if_true"), `<input id="p_coltrue" type="color" value="${el.colorTrue || "#4caf50"}">`)}</div><div>${field(t("color_if_false"), `<input id="p_colfalse" type="color" value="${el.colorFalse || "#f44336"}">`)}</div></div>`;
+}
+// Wiring dei campi colore condizionale. previewFn: funzione da richiamare all'aggiornamento.
+function wireCondColor(el, previewFn) {
+  const colTpl = document.getElementById("p_colortpl");
+  if (colTpl) colTpl.addEventListener("input", () => { el.colorTemplate = colTpl.value; });
+  const colTrue = document.getElementById("p_coltrue");
+  if (colTrue) colTrue.addEventListener("input", () => { el.colorTrue = colTrue.value; if (previewFn) previewFn(el); });
+  const colFalse = document.getElementById("p_colfalse");
+  if (colFalse) colFalse.addEventListener("input", () => { el.colorFalse = colFalse.value; if (previewFn) previewFn(el); });
 }
 
 function syncGeometryFields(el) {
@@ -487,7 +757,7 @@ function wireProps(el) {
   bind("p_y", e => el.y = clamp(parseInt(e.value) || 0, 0, SCREEN_H - el.h));
   bind("p_w", e => el.w = clamp(parseInt(e.value) || 8, 8, SCREEN_W));
   bind("p_h", e => el.h = clamp(parseInt(e.value) || 8, 8, SCREEN_H));
-  bind("p_rot", e => el.rotation = clamp(parseInt(e.value) || 0, -180, 180));
+  bind("p_rot", e => { el.rotation = clamp(parseInt(e.value) || 0, -180, 180); clampToBounds(el, nodeById(el.id)); });
   bind("p_text", e => el.text = e.value);
   bind("p_prefix", e => el.prefix = e.value);
   bind("p_suffix", e => el.suffix = e.value);
@@ -505,15 +775,56 @@ function wireProps(el) {
   const color2 = document.getElementById("p_color2");
   if (color2) color2.addEventListener("input", () => { el.color = color2.value; render(); });
 
+  const customCol = document.getElementById("p_customcol");
+  if (customCol) customCol.addEventListener("change", () => {
+    el.customColors = customCol.checked;
+    if (!el.customColors) { delete el.onColor; delete el.offColor; }
+    else { if (!el.onColor) el.onColor = "#ffc107"; if (!el.offColor) el.offColor = "#9e9e9e"; }
+    renderProps(); previewEntity(el);
+  });
+  const onCol = document.getElementById("p_oncolor");
+  if (onCol) onCol.addEventListener("input", () => { el.onColor = onCol.value; });
+  const offCol = document.getElementById("p_offcolor");
+  if (offCol) offCol.addEventListener("input", () => { el.offColor = offCol.value; });
+
   const del = document.getElementById("p_delete");
   if (del) del.addEventListener("click", deleteSelected);
+  const zf = document.getElementById("p_zfront");
+  if (zf) zf.addEventListener("click", bringForward);
+  const zb = document.getElementById("p_zback");
+  if (zb) zb.addEventListener("click", sendBackward);
   const read = document.getElementById("p_read");
   if (read) read.addEventListener("click", () => previewEntity(el));
 
   const entInput = document.getElementById("p_entity");
-  if (entInput) attachTypeahead(entInput, q => suggestEntities(q), val => { el.entity = val; setStatus(t("set_entity", val)); previewEntity(el); });
+  if (entInput) attachTypeahead(entInput, q => suggestEntities(q), val => { el.entity = val; setStatus(t("set_entity", val)); previewEntity(el); populateAttributes(el); });
+  // Auto-aggiornamento all'apertura del pannello: rilegge valore/icona dallo stato attuale.
+  if ((el.type === "entity" || el.type === "entity-icon") && el.entity) previewEntity(el);
+  const attrInput = document.getElementById("p_attribute");
+  if (attrInput) {
+    attrInput.addEventListener("input", () => { el.attribute = attrInput.value.trim(); previewEntity(el); });
+    attrInput.addEventListener("change", () => { el.attribute = attrInput.value.trim(); previewEntity(el); });
+    populateAttributes(el); // popola la tendina all'apertura del pannello
+  }
+  const autoUnit = document.getElementById("p_autounit");
+  if (autoUnit) autoUnit.addEventListener("change", () => { el.autoUnit = autoUnit.checked; previewEntity(el); });
+  const tplInput = document.getElementById("p_template");
+  if (tplInput) tplInput.addEventListener("input", () => { el.template = tplInput.value; });
+  const tplRefresh = document.getElementById("p_tpl_refresh");
+  if (tplRefresh) tplRefresh.addEventListener("click", () => previewTemplate(el));
+  // Colore condizionale: per il template rilancia l'anteprima; per le icone valuta
+  // il colore condizionale via endpoint e aggiorna l'anteprima.
+  const condPreview = (el.type === "template") ? previewTemplate : previewCondColor;
+  wireCondColor(el, condPreview);
+  // valuta subito il colore condizionale all'apertura del pannello (icone)
+  if ((el.type === "icon" || el.type === "entity-icon") && el.colorTemplate && el.colorTemplate.trim()) previewCondColor(el);
+  if (tplInput && el.type === "template" && !el._previewHtml && el.template) previewTemplate(el);
+  const dateFmt = document.getElementById("p_dateformat");
+  if (dateFmt) dateFmt.addEventListener("input", () => { el.dateFormat = dateFmt.value; refreshSelectedNode(); const pv = document.getElementById("p_preview"); if (pv) pv.textContent = displayText(el); });
   const icoInput = document.getElementById("p_icon");
   if (icoInput) attachTypeahead(icoInput, q => suggestIcons(q), val => { el.icon = val; render(); });
+  const forceIco = document.getElementById("p_forceicon");
+  if (forceIco) attachTypeahead(forceIco, q => suggestIcons(q), val => { el.forceIcon = val; previewEntity(el); });
 
   const file = document.getElementById("p_file");
   if (file) file.addEventListener("change", () => uploadImage(file.files[0], el));
@@ -560,6 +871,22 @@ function suggestEntities(q) {
   const f = q ? ENTITIES.filter(e => e.id.toLowerCase().includes(q) || (e.name || "").toLowerCase().includes(q)) : ENTITIES;
   return f.slice(0, 30).map(e => ({ value: e.id, label: e.name }));
 }
+// Suggerimenti servizi HA: cerca sia per id completo (es. "fan.toggle") sia per
+// nome semplice (es. "toggle") su tutti i domini, come la ricerca entità.
+function suggestServices(q) {
+  const map = HA_SERVICES || {};
+  const all = [];
+  Object.keys(map).forEach(dom => {
+    Object.keys(map[dom] || {}).forEach(svc => {
+      all.push({ id: dom + "." + svc, dom, svc });
+    });
+  });
+  q = (q || "").toLowerCase().trim();
+  const f = q ? all.filter(s => s.id.toLowerCase().includes(q) || s.svc.toLowerCase().includes(q) || s.dom.toLowerCase().includes(q)) : all;
+  // ordina: match esatto sull'id prima, poi per id alfabetico
+  f.sort((a, b) => a.id.localeCompare(b.id));
+  return f.slice(0, 40).map(s => ({ value: s.id, label: s.dom }));
+}
 async function suggestIcons(q) {
   if (!q) return [];
   const used = ENTITY_ICONS.filter(n => n.includes(q.toLowerCase())).slice(0, 8).map(n => ({ value: n, label: t("in_use"), icon: n }));
@@ -571,14 +898,76 @@ async function suggestIcons(q) {
 
 async function previewEntity(el) {
   if (!el.entity) return;
+  // Icona entità: chiedi all'add-on l'icona calcolata dallo stato (stesso resolver del citofono)
+  if (el.type === "entity-icon") {
+    try {
+      const r = await fetch("api/entity-icon/" + encodeURIComponent(el.entity));
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+      // Se e' impostata un'icona forzata, la usiamo; il colore resta quello dallo stato.
+      el.icon = (el.forceIcon && el.forceIcon.trim()) ? el.forceIcon.trim() : (data.icon || "help-circle-outline");
+      if (data.color) el._previewColor = data.color;
+      render();
+      setStatus(t("set_entity", el.entity));
+    } catch (e) { setStatus(t("entity_err", e.message)); }
+    return;
+  }
   try {
     const r = await fetch("api/state/" + encodeURIComponent(el.entity));
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
-    el._preview = data.state; refreshSelectedNode();
+    const autoUnit = (el.autoUnit === undefined) ? true : !!el.autoUnit;
+    if (el.attribute) {
+      // Anteprima dell'attributo scelto (valore grezzo).
+      const av = (data.attributes && (el.attribute in data.attributes)) ? data.attributes[el.attribute] : "?";
+      el._preview = (av === null || av === undefined) ? "?" : av;
+      // per un attributo numerico applichiamo comunque l'unità se disponibile
+      el._previewSuffix = (autoUnit && data.unit && isFinite(parseFloat(av))) ? (" " + data.unit) : "";
+    } else {
+      // Mostra lo stato tradotto (come il citofono); unita' automatica se numerico.
+      el._preview = (data.translated !== undefined && data.translated !== null) ? data.translated : data.state;
+      el._previewSuffix = (autoUnit && data.unit && isFinite(parseFloat(data.state))) ? (" " + data.unit) : "";
+    }
+    refreshSelectedNode();
     const pv = document.getElementById("p_preview"); if (pv) pv.textContent = displayText(el);
     setStatus(t("entity_val", el.entity, data.state));
   } catch (e) { setStatus(t("entity_err", e.message)); }
+}
+
+// Anteprima di un elemento template: renderizza il Jinja via HA e mostra l'HTML.
+async function previewTemplate(el) {
+  try {
+    const r = await fetch("api/template-preview", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ template: el.template || "", colorTemplate: el.colorTemplate || "" })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+    el._previewHtml = data.html || "";
+    // colore condizionale: applica lo stesso criterio del server
+    if (el.colorTemplate && data.colorResult != null) {
+      const low = String(data.colorResult).trim().toLowerCase();
+      if (low === "true" || low === "on" || low === "1") { if (el.colorTrue) el.color = el.colorTrue; }
+      else if (low === "false" || low === "off" || low === "0" || low === "none" || low === "") { if (el.colorFalse) el.color = el.colorFalse; }
+      else if (data.colorResult) { el.color = data.colorResult; }
+    }
+    refreshSelectedNode();
+    const pv = document.getElementById("p_tpl_preview"); if (pv) pv.innerHTML = el._previewHtml;
+    setStatus(t("ready"));
+  } catch (e) { setStatus(t("entity_err", e.message)); }
+}
+
+// Popola la tendina (datalist) degli attributi disponibili per l'entita' scelta.
+async function populateAttributes(el) {
+  const dl = document.getElementById("p_attrlist");
+  if (!dl || !el.entity) return;
+  try {
+    const r = await fetch("api/state/" + encodeURIComponent(el.entity));
+    const data = await r.json();
+    if (!r.ok) return;
+    const names = data.attributeNames || [];
+    dl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join("");
+  } catch {}
 }
 
 function uploadImage(file, el) {
@@ -635,12 +1024,31 @@ async function refreshLayoutList() {
     layoutList.value = cur;
   } catch {}
 }
-function stripPreview(el) { const c = { ...el }; delete c._preview; return c; }
+// Valuta il colore condizionale (colorTemplate) di icone/entity-icon per l'anteprima
+// nell'editor, come fa il server per il citofono. Aggiorna el._previewColor.
+async function previewCondColor(el) {
+  if (!el.colorTemplate || !el.colorTemplate.trim()) { return; }
+  try {
+    const r = await fetch("api/template-preview", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ template: "", colorTemplate: el.colorTemplate })
+    });
+    const data = await r.json();
+    if (!r.ok || data.colorResult == null) return;
+    const low = String(data.colorResult).trim().toLowerCase();
+    if (low === "true" || low === "on" || low === "1") { if (el.colorTrue) el._previewColor = el.colorTrue; }
+    else if (low === "false" || low === "off" || low === "0" || low === "none" || low === "") { if (el.colorFalse) el._previewColor = el.colorFalse; }
+    else if (data.colorResult) { el._previewColor = String(data.colorResult).trim(); }
+    render();
+  } catch {}
+}
+
+function stripPreview(el) { const c = { ...el }; delete c._preview; delete c._previewColor; delete c._previewSuffix; delete c._previewHtml; return c; }
 
 document.getElementById("btnSave").addEventListener("click", async () => {
   const name = layoutNameInput.value.trim();
   if (!/^[A-Za-z0-9 _-]{1,40}$/.test(name)) { setStatus(t("name_invalid")); return; }
-  const body = { name, background: layout.background, elements: layout.elements.map(stripPreview) };
+  const body = { name, background: layout.background, elements: layout.elements.map(stripPreview), buttons: layout.buttons || {} };
   const r = await fetch("api/layouts/" + encodeURIComponent(name), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (r.ok) { layout.name = name; savedSnapshot = serializeLayout(); setStatus(t("saved", name)); refreshLayoutList(); } else setStatus(t("save_error"));
 });
@@ -651,9 +1059,28 @@ async function loadLayoutByName(name) {
   layout = await r.json();
   if (!layout.elements) layout.elements = [];
   if (!layout.background) layout.background = "#000000";
+  if (!layout.buttons) layout.buttons = {};
   layoutNameInput.value = layout.name || name; if (layoutList) layoutList.value = name;
   selectedIds.clear(); selectedId = null; render(); renderProps(); setStatus(t("loaded", name));
-  savedSnapshot = serializeLayout(); return true;
+  savedSnapshot = serializeLayout();
+  // Aggiorna tutti gli elementi dinamici allo stato attuale, poi riallinea lo snapshot
+  // (i valori/icone calcolati non devono contare come "modifica non salvata"):
+  //  - entity-icon: ricalcola icona+colore dallo stato
+  //  - entity: rilegge valore/attributo/unità
+  //  - template: renderizza il Jinja
+  const dyn = [];
+  layout.elements.forEach(el => {
+    if (el.type === "entity-icon" && el.entity) dyn.push(previewEntity(el));
+    else if (el.type === "entity" && el.entity) dyn.push(previewEntity(el));
+    else if (el.type === "template" && el.template) dyn.push(previewTemplate(el));
+    else if (el.type === "icon" && el.colorTemplate && el.colorTemplate.trim()) dyn.push(previewCondColor(el));
+    // le entity-icon con colorTemplate valutano anche il colore condizionale
+    if (el.type === "entity-icon" && el.colorTemplate && el.colorTemplate.trim()) dyn.push(previewCondColor(el));
+  });
+  if (dyn.length) {
+    Promise.all(dyn).then(() => { render(); savedSnapshot = serializeLayout(); });
+  }
+  return true;
 }
 if (layoutList) layoutList.addEventListener("change", () => { const name = layoutList.value; if (name) loadLayoutByName(name); });
 document.getElementById("btnDelete").addEventListener("click", async () => {
@@ -826,10 +1253,13 @@ function renderMultiProps() {
     + alignBtn("al", "alignLeft") + alignBtn("ach", "alignCenterH") + alignBtn("ar", "alignRight") + alignBtn("adh", "distributeH")
     + alignBtn("at", "alignTop") + alignBtn("acv", "alignMiddleV") + alignBtn("ab", "alignBottom") + alignBtn("adv", "distributeV")
     + `</div></div>`;
+  html += `<div class="field inline"><div><button id="m_group" style="width:100%">${t("group")}</button></div><div><button id="m_ungroup" style="width:100%">${t("ungroup")}</button></div></div>`;
   html += `<button id="m_copy" style="width:100%;margin-bottom:.4rem">${t("copy_sel")}</button>`;
   html += `<button class="danger" id="m_delete" style="width:100%">${t("delete_sel", n)}</button>`;
   propsBody.innerHTML = html;
   propsBody.querySelectorAll("button[data-align]").forEach(b => b.addEventListener("click", () => ALIGN[b.dataset.align]()));
+  document.getElementById("m_group").addEventListener("click", groupSelected);
+  document.getElementById("m_ungroup").addEventListener("click", ungroupSelected);
   document.getElementById("m_copy").addEventListener("click", copySelection);
   document.getElementById("m_delete").addEventListener("click", deleteSelected);
   injectIcons(propsBody);
@@ -841,6 +1271,38 @@ function wireHome() {
   const x = document.getElementById("homeClose"); if (x) x.addEventListener("click", hideHome);
   const ov = document.getElementById("homeOverlay");
   if (ov) ov.addEventListener("click", (e) => { if (e.target === ov && !document.getElementById("homeClose").hidden) hideHome(); });
+  // Export: scarica il backup di tutte le schede.
+  const exp = document.getElementById("btnExport");
+  if (exp) exp.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.href = "api/export"; a.download = "c100x-schede-backup.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setStatus(t("exported"));
+  });
+  // Import: seleziona un file di backup e ripristina le schede.
+  const imp = document.getElementById("btnImport");
+  const impFile = document.getElementById("importFile");
+  if (imp && impFile) {
+    imp.addEventListener("click", () => impFile.click());
+    impFile.addEventListener("change", async () => {
+      const file = impFile.files && impFile.files[0]; if (!file) return;
+      try {
+        const dump = JSON.parse(await file.text());
+        // primo tentativo senza sovrascrivere
+        let r = await fetch("api/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dump) });
+        let res = await r.json();
+        if (!r.ok) throw new Error(res.error || "import");
+        // se alcune sono state saltate perché esistono già, chiedi se sovrascrivere
+        if (res.skipped > 0 && confirm(t("import_overwrite"))) {
+          r = await fetch("api/import?overwrite=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dump) });
+          res = await r.json();
+        }
+        setStatus(t("imported", res.imported, res.skipped));
+        showHome(); refreshLayoutList();
+      } catch (e) { setStatus(t("import_err")); }
+      impFile.value = "";
+    });
+  }
 }
 async function showHome() {
   const ov = document.getElementById("homeOverlay"), grid = document.getElementById("homeGrid");
@@ -874,7 +1336,10 @@ async function showHome() {
 function hideHome() { document.getElementById("homeOverlay").hidden = true; }
 async function buildThumb(container, name) {
   try {
-    const lay = await (await fetch("api/layouts/" + encodeURIComponent(name))).json();
+    // usa il layout risolto allo stato attuale, così l'anteprima mostra i dati aggiornati
+    let lay;
+    try { lay = await (await fetch("api/layout-live/" + encodeURIComponent(name))).json(); }
+    catch { lay = await (await fetch("api/layouts/" + encodeURIComponent(name))).json(); }
     const w = container.clientWidth || 170, sc = w / SCREEN_W;
     const inner = document.createElement("div"); inner.className = "thumb-scale";
     inner.style.width = SCREEN_W + "px"; inner.style.height = SCREEN_H + "px";
@@ -913,7 +1378,8 @@ function serializeLayout() {
   return JSON.stringify({
     name: layout.name || "",
     background: layout.background || "#000000",
-    elements: (layout.elements || []).map(stripPreview)
+    elements: (layout.elements || []).map(stripPreview),
+    buttons: layout.buttons || {}
   });
 }
 let savedSnapshot = "";
@@ -1000,3 +1466,209 @@ async function startupView() {
 
 /* avvio: dopo che TUTTE le definizioni (incluso il blocco fix) sono pronte */
 boot();
+
+/* ============================================================
+ *  Configuratore PULSANTI del citofono (per-scheda)
+ *  Frontalino SVG cliccabile + azione HA (stile Strumenti Sviluppo) + placeholder.
+ * ============================================================ */
+const BTN_KEYS = ["1", "2", "3", "4", "5", "6", "7", "up", "down", "ok", "phone_left", "phone_right"];
+const WHEEL_KEYS = new Set(["up", "down", "ok"]);
+const NATIVE_KEYS = new Set(["6", "7", "phone_left", "phone_right"]); // serratura, occhio, cornette
+let HA_SERVICES = null;     // cache elenco servizi { domain: { service: {...} } }
+let btnSelected = null;     // tasto attualmente selezionato nel modale
+
+async function loadServices() {
+  if (HA_SERVICES) return HA_SERVICES;
+  try {
+    const arr = await (await fetch("api/services")).json();
+    // /api/services ritorna [{domain, services:{name:{...}}}, ...]
+    const map = {};
+    for (const d of (Array.isArray(arr) ? arr : [])) {
+      if (d && d.domain) map[d.domain] = d.services || {};
+    }
+    HA_SERVICES = map;
+  } catch { HA_SERVICES = {}; }
+  return HA_SERVICES;
+}
+
+// Mini-conversione oggetto <-> testo "chiave: valore" (una per riga). Accetta anche JSON.
+function dataToText(obj) {
+  if (!obj || typeof obj !== "object") return "";
+  try { return Object.entries(obj).map(([k, v]) => k + ": " + (typeof v === "string" ? v : JSON.stringify(v))).join("\n"); }
+  catch { return ""; }
+}
+function textToData(txt) {
+  txt = (txt || "").trim();
+  if (!txt) return {};
+  // prova JSON puro
+  if (txt[0] === "{") { try { return JSON.parse(txt); } catch {} }
+  const out = {};
+  for (const line of txt.split("\n")) {
+    const l = line.trim(); if (!l || l[0] === "#") continue;
+    const i = l.indexOf(":"); if (i < 0) continue;
+    const k = l.slice(0, i).trim(); let v = l.slice(i + 1).trim();
+    // rimuovi le virgolette YAML circostanti ("..." o '...'), altrimenti finiscono
+    // nel valore e rompono i template Jinja (HA lo vedrebbe come stringa letterale).
+    if (v.length >= 2 && ((v[0] === '"' && v[v.length - 1] === '"') || (v[0] === "'" && v[v.length - 1] === "'"))) {
+      out[k] = v.slice(1, -1); // valore quotato: sempre stringa (anche se "123")
+      continue;
+    }
+    if (v === "true") v = true; else if (v === "false") v = false;
+    else if (v !== "" && !isNaN(Number(v))) v = Number(v);
+    else if ((v[0] === "[" || v[0] === "{") && !/^\{\{|^\{%/.test(v)) { try { v = JSON.parse(v); } catch {} }
+    out[k] = v;
+  }
+  return out;
+}
+
+function btnLabel(key) {
+  const names = { "5": "★ (5)", "6": "⚿ (6)", "7": "◉ (7)", up: "Rotella su", down: "Rotella giù", ok: "Rotella OK", phone_left: "Cornetta rispondi", phone_right: "Cornetta riaggancia" };
+  return names[key] || (t("bm_button") + " " + key);
+}
+
+function refreshFaceplate() {
+  // aggiorna sia la faceplate SVG del vecchio modale (se presente)...
+  const svg = document.getElementById("faceplate");
+  if (svg) {
+    svg.querySelectorAll(".hot").forEach(g => {
+      const k = g.dataset.btn;
+      const cfg = layout.buttons && layout.buttons[k];
+      g.classList.toggle("assigned", !!(cfg && (cfg.action || cfg.light || (cfg.toast && cfg.toast.text))));
+      g.classList.toggle("selected", btnSelected === k);
+    });
+  }
+  // ...sia i tasti della scocca attorno al canvas dell'editor.
+  document.querySelectorAll(".shell-btn").forEach(b => {
+    const k = b.dataset.btn;
+    const cfg = layout.buttons && layout.buttons[k];
+    b.classList.toggle("assigned", !!(cfg && (cfg.action || cfg.light || (cfg.toast && cfg.toast.text))));
+    b.classList.toggle("selected", btnSelected === k);
+  });
+}
+
+async function selectButton(key) {
+  btnSelected = key;
+  refreshFaceplate();
+  const services = await loadServices();
+  const cfg = (layout.buttons && layout.buttons[key]) || {};
+  const act = cfg.action || {};
+  const toast = cfg.toast || {};
+  const svcSel = act.domain && act.service ? (act.domain + "." + act.service) : "";
+
+  let html = `<h3 style="margin:.2rem 0 .6rem">${btnLabel(key)}</h3>`;
+  if (WHEEL_KEYS.has(key)) html += `<p class="hint" style="margin-top:0">${t("bm_wheel_note")}</p>`;
+
+  html += field(t("bm_service"), `<div class="ta-wrap"><input id="bm_service" type="text" value="${escapeHtml(svcSel)}" placeholder="es. light.toggle" autocomplete="off"></div>`);
+  html += `<div id="bm_actionfields"></div>`;
+  html += field(t("bm_toast_text"), `<input id="bm_toast" type="text" value="${escapeHtml(toast.text || "")}">`);
+  html += `<p class="hint" style="margin-top:-.3rem">${t("bm_toast_jinja")}</p>`;
+  html += field(t("bm_toast_secs"), `<input id="bm_secs" type="number" min="1" max="30" value="${toast.seconds || 2}">`);
+  html += `<label class="row checkbox" style="margin:.4rem 0"><input id="bm_light" type="checkbox" ${cfg.light ? "checked" : ""}> <span>${t("bm_illuminate")}</span></label>`;
+  html += `<p class="hint" style="margin-top:0">${t("bm_illuminate_note")}</p>`;
+  html += `<div class="modal-actions"><button id="bm_clearbtn" class="danger">${t("bm_clear")}</button></div>`;
+  html += `<p class="hint">${t("bm_saved_hint")}</p>`;
+  // La configurazione del tasto va sempre nel pannello Proprietà a destra.
+  const cfgTarget = document.getElementById("propsBody");
+  cfgTarget.innerHTML = html;
+
+  renderActionFields(key, act);
+
+  // Ricerca azione come le entità: si può scrivere "fan.toggle" o solo "toggle".
+  const applyService = (val) => {
+    ensureBtn(key);
+    val = (val || "").trim();
+    if (!val) { delete layout.buttons[key].action; }
+    else {
+      // se l'utente scrive solo il nome semplice, provo a risolverlo su un dominio unico
+      let full = val;
+      if (val.indexOf(".") < 0) {
+        const matches = suggestServices(val).filter(s => s.value.split(".")[1] === val);
+        if (matches.length === 1) full = matches[0].value;
+      }
+      const [domain, service] = full.split(".");
+      if (domain && service) {
+        const prev = layout.buttons[key].action || {};
+        layout.buttons[key].action = { domain, service, target: prev.target, data: prev.data };
+      }
+    }
+    renderActionFields(key, (layout.buttons[key].action) || {});
+    refreshFaceplate();
+  };
+  const svcInput = document.getElementById("bm_service");
+  // durante la digitazione applichiamo solo se il valore è un servizio valido e completo;
+  // così scrivendo "toggle" i suggerimenti appaiono, e la scelta (o "dominio.servizio"
+  // completo) applica l'azione. La cancellazione totale rimuove l'azione.
+  const tryApply = (val) => {
+    val = (val || "").trim();
+    if (val === "") { applyService(""); return; }
+    const services = HA_SERVICES || {};
+    if (val.indexOf(".") > 0) {
+      const parts = val.split("."); const d = parts[0], s = parts[1];
+      if (services[d] && services[d][s]) applyService(val);
+    } else {
+      const matches = suggestServices(val).filter(x => x.value.split(".")[1] === val);
+      if (matches.length === 1) applyService(matches[0].value);
+    }
+  };
+  attachTypeahead(svcInput, q => suggestServices(q), val => tryApply(val));
+  svcInput.addEventListener("change", (e) => tryApply(e.target.value));
+  document.getElementById("bm_toast").addEventListener("input", (e) => { ensureBtn(key); setToast(key, "text", e.target.value); refreshFaceplate(); });
+  document.getElementById("bm_secs").addEventListener("input", (e) => { ensureBtn(key); setToast(key, "seconds", clamp(parseInt(e.target.value) || 2, 1, 30)); });
+  document.getElementById("bm_light").addEventListener("change", (e) => {
+    ensureBtn(key);
+    if (e.target.checked) layout.buttons[key].light = true; else delete layout.buttons[key].light;
+    refreshFaceplate();
+  });
+  document.getElementById("bm_clearbtn").addEventListener("click", () => {
+    delete layout.buttons[key]; btnSelected = key; selectButton(key);
+  });
+}
+
+function ensureBtn(key) { if (!layout.buttons) layout.buttons = {}; if (!layout.buttons[key]) layout.buttons[key] = {}; }
+function setToast(key, prop, val) {
+  ensureBtn(key);
+  if (!layout.buttons[key].toast) layout.buttons[key].toast = {};
+  layout.buttons[key].toast[prop] = val;
+  if (!layout.buttons[key].toast.text) delete layout.buttons[key].toast;
+}
+
+// Campi azione (target entità + dati YAML), stile Strumenti Sviluppo ma essenziale.
+function renderActionFields(key, act) {
+  const box = document.getElementById("bm_actionfields");
+  if (!box) return;
+  if (!act || !act.domain) { box.innerHTML = ""; return; }
+  const targetEntity = (act.target && act.target.entity_id) || "";
+  let html = "";
+  html += field(t("bm_target_entity"), `<div class="ta-wrap"><input id="bm_target" type="text" value="${escapeHtml(targetEntity)}" placeholder="es. light.sala" autocomplete="off"></div>`);
+  html += field(t("bm_data"), `<textarea id="bm_data" placeholder="brightness: 200">${escapeHtml(dataToText(act.data))}</textarea>`);
+  box.innerHTML = html;
+
+  const tin = document.getElementById("bm_target");
+  attachTypeahead(tin, q => suggestEntities(q), val => {
+    ensureBtn(key); const a = layout.buttons[key].action;
+    if (!a.target) a.target = {}; a.target.entity_id = val;
+    if (!val) delete a.target;
+  });
+  tin.addEventListener("input", () => {
+    ensureBtn(key); const a = layout.buttons[key].action;
+    const v = tin.value.trim();
+    if (v) { if (!a.target) a.target = {}; a.target.entity_id = v; } else if (a.target) delete a.target.entity_id;
+  });
+  document.getElementById("bm_data").addEventListener("input", (e) => {
+    ensureBtn(key); const a = layout.buttons[key].action;
+    const d = textToData(e.target.value);
+    if (Object.keys(d).length) a.data = d; else delete a.data;
+  });
+}
+
+// Wiring scocca attorno al canvas: click su un tasto fisico → config nel pannello Proprietà
+let shellServicesLoaded = false;
+document.getElementById("citoButtons").addEventListener("click", async (e) => {
+  const b = e.target.closest(".shell-btn"); if (!b) return;
+  if (!layout.buttons) layout.buttons = {};
+  if (!shellServicesLoaded) { loadServices(); shellServicesLoaded = true; }
+  // deseleziona eventuale elemento del canvas per non confondere il pannello props
+  selectedIds.clear(); selectedId = null;
+  screenEl.querySelectorAll(".el.selected").forEach(n => n.classList.remove("selected"));
+  selectButton(b.dataset.btn);
+});

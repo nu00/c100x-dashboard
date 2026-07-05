@@ -85,8 +85,25 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .hint { color: var(--muted); font-size: .78rem; line-height: 1.5; margin-top: 1rem; }
 
 /* ---- Stage (la tela = lo schermo del citofono) ---- */
-.stage-area { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.2rem; overflow: auto; }
-.stage-wrap { transform-origin: top left; }
+.stage-area { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; overflow: auto; }
+.stage-wrap { transform-origin: top center; }
+.stage-foot {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: .3rem .9rem;
+  font-family: var(--mono);
+  font-size: .76rem;
+  color: var(--muted);
+  background: rgba(21, 23, 28, .82);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  white-space: nowrap;
+}
 .screen {
   position: relative; width: 800px; height: 480px;
   background: #000; overflow: hidden;
@@ -94,7 +111,6 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
   box-shadow: 0 0 0 6px #0c0d10, 0 18px 50px rgba(0,0,0,.5);
 }
 .screen:focus { outline: 1px solid var(--accent); }
-.stage-foot { margin-top: .8rem; font-family: var(--mono); font-size: .76rem; color: var(--muted); height: 1.2em; }
 
 /* ---- Elementi sulla tela ---- */
 .el { position: absolute; user-select: none; cursor: grab; }
@@ -274,3 +290,169 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .brand-logo { display: inline-flex; width: 22px; height: 22px; border-radius: 5px; overflow: hidden; flex: 0 0 auto; }
 .brand-logo.lg { width: 44px; height: 44px; }
 .brand-logo svg { width: 100%; height: 100%; display: block; }
+
+/* --- Configuratore pulsanti citofono --- */
+.modal-wide { width: 820px; max-width: 95vw; }
+.btn-cfg-wrap { display: flex; gap: 1.2rem; align-items: flex-start; }
+.faceplate-col { flex: 0 0 300px; text-align: center; }
+#faceplate { width: 300px; height: 300px; }
+#faceplate .hot { cursor: pointer; }
+#faceplate .hot rect { fill: #e4e4e7; stroke: #a1a1aa; stroke-width: 1; transition: fill .12s, stroke .12s; }
+#faceplate .hot:hover rect { fill: #d4d4d8; }
+#faceplate .hot.assigned rect { fill: #f2a93b33; stroke: var(--accent); stroke-width: 2; }
+#faceplate .hot.selected rect { stroke: var(--accent); stroke-width: 2.5; }
+#faceplate .hot .dots circle { fill: #52525b; }
+#faceplate .hot text { fill: #71717a; font-size: 10px; text-anchor: middle; }
+#faceplate .hot text.ico { fill: #3f3f46; font-size: 20px; dominant-baseline: middle; }
+#faceplate .hot.assigned text.ico { fill: var(--accent); }
+#faceplate .phone { fill: #a1a1aa; font-size: 18px; text-anchor: middle; }
+.btn-cfg-col { flex: 1 1 auto; min-width: 0; }
+.btn-cfg-col .field { margin-bottom: .6rem; }
+.btn-cfg-col textarea { width: 100%; font-family: var(--mono); font-size: .8rem; min-height: 120px; }
+.btn-yaml-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
+
+/* ---- pannello laterale configuratore pulsanti + faceplate CAD ---- */
+/* Il modale "Pulsanti del citofono" diventa un pannello ancorato a destra,
+   così configuri i tasti "di lato" mentre vedi la scheda. */
+.modal.side-panel {
+  justify-content: flex-end;
+  align-items: stretch;
+  background: rgba(8,10,14,.45);
+}
+.modal.side-panel .modal-box {
+  max-width: 560px;
+  width: 560px;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  border-left: 1px solid var(--line);
+  margin: 0;
+  overflow-y: auto;
+  animation: slideInRight .18s ease-out;
+}
+@keyframes slideInRight { from { transform: translateX(30px); opacity: .4 } to { transform: translateX(0); opacity: 1 } }
+
+/* faceplate: sfondo scuro per far risaltare la scocca chiara del citofono */
+.faceplate-col { display: flex; flex-direction: column; align-items: center; }
+#faceplate { width: 260px; height: 260px; }
+#faceplate .side-ico { font-family: sans-serif; }
+#faceplate .phone { fill: #6b6862; }
+#faceplate text { font-family: var(--mono, monospace); font-size: 9px; fill: #6b6862; text-anchor: middle; dominant-baseline: middle; }
+#faceplate .ico { font-size: 16px; fill: #3a3d43; }
+/* zone cliccabili */
+#faceplate .hot { cursor: pointer; }
+#faceplate .hot rect { fill: #ffffff; stroke: #cfccc4; stroke-width: 1; transition: fill .12s, stroke .12s; }
+#faceplate .hot .dots circle { fill: #8a8680; }
+#faceplate .hot:hover rect { stroke: var(--accent); }
+#faceplate .hot.assigned rect { fill: #fff4e2; stroke: var(--accent); }
+#faceplate .hot.assigned .dots circle { fill: var(--accent); }
+#faceplate .hot.selected rect { fill: var(--accent); stroke: var(--accent); }
+#faceplate .hot.selected text, #faceplate .hot.selected .ico { fill: #1a1a1a; }
+#faceplate .hot.selected .dots circle { fill: #1a1a1a; }
+
+/* ============================================================
+   scocca del citofono ATTORNO al canvas
+   Misure ESATTE dai riquadri tracciati sulla foto reale:
+   - VETRO nero:  X 10.6-89.5%, Y 8.5-61.4% del corpo
+   - CANVAS (area grafica) = 800x480: X 17.3-82.5%, Y 13.8-52.9%  (rapporto 1.668 = canvas)
+   - corpo quasi quadrato (rapporto 0.999): canvas 800px = 65.2% -> corpo 1227x1228
+   - pallini 1-4 a y 68.9% ; icone 5-6-7 a y 77% ; cornette a y 91.8%
+   Il canvas è FISSO; il corpo è dimensionato di conseguenza e scalato per stare a schermo.
+   Icone SVG vere, niente emoji.
+   ============================================================ */
+.cito-shell {
+  position: relative;
+  width: 1227px;
+  height: 1228px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg,#fdfdfc,#f0efeb);
+  border: 1px solid #d5d3cd;
+  border-radius: 46px;
+  box-shadow: 0 22px 60px rgba(0,0,0,.55), inset 0 1px 0 #ffffff;
+}
+/* VETRO nero: X 10.6-89.5% (largh 78.9%), Y 8.5-61.4% (alt 52.9%) */
+.cito-glass {
+  position: absolute;
+  left: 10.6%; top: 8.5%;
+  width: 78.9%; height: 52.9%;
+  background: linear-gradient(135deg,#33363b 0%,#191b1f 50%,#0b0c0f 100%);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 4px rgba(255,255,255,.12), 0 2px 8px rgba(0,0,0,.45);
+}
+/* tacca sensore/telecamera sopra il vetro */
+.cito-sensor {
+  position: absolute; left: 50%; top: 6%; transform: translateX(-50%);
+  width: 54px; height: 9px; border-radius: 4px; background: #34373d; z-index: 3;
+}
+/* wifi + campanello: nel corpo, a destra, all'altezza della parte bassa del vetro */
+.cito-sideicons {
+  position: absolute; right: 3.5%; top: 48%;
+  display: flex; flex-direction: column; gap: 20px; align-items: center;
+  color: #9a968e; z-index: 3;
+}
+.cito-sideicons .i { width: 34px; height: 34px; }
+
+/* linea di separazione tra la fila icone (5-6-7) e la fila cornette */
+.cito-divider {
+  position: absolute;
+  left: 4%; right: 4%; top: 84.5%;
+  height: 1px;
+  background: #d8d5ce;
+  z-index: 1;
+}
+
+/* CANVAS = area grafica 800x480: X 17.3%, Y 13.8% del corpo, dentro il vetro */
+.cito-shell .screen {
+  position: absolute;
+  left: 17.3%; top: 13.8%;
+  z-index: 2;
+  border-radius: 1px;
+}
+
+/* TASTI: posizione in % del corpo (left/top inline). */
+.shell-btn {
+  position: absolute;
+  transform: translate(-50%,-50%);
+  display: flex; align-items: center; justify-content: center;
+  width: 82px; height: 60px;
+  background: #ffffff;
+  border: 1px solid #dcd9d2;
+  border-radius: 12px;
+  cursor: pointer;
+  color: #55524c;
+  transition: background .12s, border-color .12s, box-shadow .12s;
+  z-index: 2;
+}
+.shell-btn:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+.shell-btn .i { width: 32px; height: 32px; display: block; color: inherit; }
+/* cornette: pulsanti più grandi (come da foto reale) */
+.shell-btn.phone { width: 104px; height: 66px; }
+.shell-btn.phone .i { width: 34px; height: 34px; }
+/* cornetta sinistra = rispondi (verde), destra = riaggancia (rossa) */
+.shell-btn.phone-answer { color: #1a9e4b; }
+.shell-btn.phone-answer:hover { border-color: #1a9e4b; }
+.shell-btn.phone-hangup { color: #d63a3a; }
+.shell-btn.phone-hangup:hover { border-color: #d63a3a; }
+.i.flip { transform: scaleX(-1); }
+
+.shell-btn.assigned { background: #fff3e0; border-color: var(--accent); color: #b26a00; }
+.shell-btn.selected { background: var(--accent); border-color: var(--accent); color: #1a1a1a; box-shadow: 0 0 0 3px rgba(255,153,0,.28); }
+.shell-btn.assigned .dots span { background: #b26a00; }
+.shell-btn.selected .dots span { background: #1a1a1a; }
+
+/* pallini 1-4 */
+.dots { display: grid; gap: 4px; }
+.dots span { width: 6px; height: 6px; border-radius: 50%; background: #8a8680; display: block; }
+.dots.d1 { grid-template-columns: 1fr; }
+.dots.d2 { grid-template-columns: 1fr 1fr; }
+.dots.d3 { grid-template-columns: repeat(3,1fr); }
+.dots.d4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+
+/* strumenti export/import nella home */
+.home-tools { margin-left: auto; display: flex; gap: .5rem; }
+.home-tools button {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .4rem .7rem; font-size: .82rem; cursor: pointer;
+}
+.home-tools button:hover { border-color: var(--accent); }
