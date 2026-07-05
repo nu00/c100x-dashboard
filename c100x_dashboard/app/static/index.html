@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>C100X Dashboard — Editor</title>
-<link rel="stylesheet" href="style.css?v=0.10.0">
+<link rel="stylesheet" href="style.css?v=0.10.1">
 </head>
 <body>
 <!-- decoy per disinnescare l'autofill credenziali del browser -->
@@ -84,6 +84,9 @@
           <symbol id="ic-wifi" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18.5" r="1.3" fill="currentColor"/></symbol>
           <!-- campanello -->
           <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M6 16V10a6 6 0 0 1 12 0v6l1.5 2H4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+          <symbol id="ic-chevron-up" viewBox="0 0 24 24"><path d="M7.4 15.4 12 10.8l4.6 4.6L18 14l-6-6-6 6z" fill="currentColor"/></symbol>
+          <symbol id="ic-chevron-down" viewBox="0 0 24 24"><path d="M7.4 8.6 12 13.2l4.6-4.6L18 10l-6 6-6-6z" fill="currentColor"/></symbol>
+          <symbol id="ic-wheel-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></symbol>
         </defs>
       </svg>
 
@@ -111,6 +114,11 @@
           <button class="shell-btn ic" data-btn="7" title="Occhio (7)" style="left:69.5%;top:77%"><svg class="i"><use href="#ic-eye"/></svg></button>
 
           <span class="cito-divider"></span>
+
+          <!-- Rotella (lato destro): su / OK / giù -->
+          <button class="shell-btn wheel" data-btn="up" title="Rotella su" style="left:93%;top:60%"><svg class="i"><use href="#ic-chevron-up"/></svg></button>
+          <button class="shell-btn wheel" data-btn="ok" title="Rotella OK" style="left:93%;top:68%"><svg class="i"><use href="#ic-wheel-ok"/></svg></button>
+          <button class="shell-btn wheel" data-btn="down" title="Rotella giù" style="left:93%;top:76%"><svg class="i"><use href="#ic-chevron-down"/></svg></button>
 
           <button class="shell-btn phone phone-answer" data-btn="phone_left" title="Cornetta sinistra — rispondi" style="left:12.5%;top:91.8%"><svg class="i"><use href="#ic-phone"/></svg></button>
           <button class="shell-btn phone phone-hangup" data-btn="phone_right" title="Cornetta destra — riaggancia" style="left:85.8%;top:91.8%"><svg class="i"><use href="#ic-phone-down"/></svg></button>
@@ -173,6 +181,6 @@
   </div>
 </div>
 
-<script src="editor.js?v=0.10.0"></script>
+<script src="editor.js?v=0.10.1"></script>
 </body>
 </html>

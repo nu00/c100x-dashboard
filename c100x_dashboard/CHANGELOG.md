@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.1
+
+- **Backup completo con le immagini**: l'export ora include anche le immagini caricate (non solo le schede). Reimportando un backup, le immagini vengono ripristinate automaticamente, così reinstallando l'add-on non si perde più nulla. I backup fatti con la 0.10.0 (solo schede) restano importabili.
+- **Fix cache immagini**: le immagini non vengono più messe in cache in modo aggressivo dal browser; un'immagine ricaricata o ripristinata da backup appare subito, senza dover forzare il refresh (risolveva casi in cui un'immagine mancante restava "bloccata" come non trovata anche dopo averla ricaricata).
+- **Anteprime schede aggiornate**: le miniature nella schermata iniziale mostrano ora i valori risolti (entità e template) invece del codice grezzo. Prima gli elementi template mostravano il codice Jinja non renderizzato.
+- **Dati azione YAML annidati**: il campo "dati" delle azioni supporta ora YAML con struttura annidata e indentazione (es. `notify.mobile_app` con `data:` > `push:` > `sound:`). L'indentazione non viene più persa, sia scrivendo sia riaprendo l'azione. Le liste (`- ...`) e i tab sono supportati.
+- **Rotella configurabile**: la rotella (su / OK / giù) è ora presente nell'editor come tre pulsanti sul lato destro del citofono; puoi assegnare azioni di Home Assistant a ciascuna direzione, esattamente come agli altri tasti. Il citofono già le gestiva: mancava solo il modo di configurarle.
+
 ## 0.10.0
 
 Release importante: pulsanti del citofono configurabili, editor completamente rinnovato con anteprima fedele del dispositivo, supporto template Jinja2 in stile Lovelace, e molte migliorie a icone, valori ed esperienza d'uso.

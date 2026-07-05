@@ -44,7 +44,7 @@ const I18N = {
     alignment: "Allineamento", align_left: "Sinistra", align_center: "Centro", align_right: "Destra", in_use: "in uso",
     added: "Aggiunto: {0}", deleted: "Elemento eliminato.", name_invalid: "Nome non valido (lettere, numeri, spazi, - _ ; max 40).",
     saved: "Salvato: {0}", save_error: "Errore nel salvataggio.", loaded: "Caricato: {0}", load_error: "Impossibile caricare.",
-    layout_deleted: "Eliminato: {0}", new_layout: "Nuovo layout.", export_btn: "Esporta backup", import_btn: "Importa backup", exported: "Backup esportato.", imported: "Importate {0} schede ({1} saltate).", import_overwrite: "Alcune schede esistono già. Sovrascriverle?", import_err: "Backup non valido.", confirm_delete: 'Eliminare il layout "{0}"?',
+    layout_deleted: "Eliminato: {0}", new_layout: "Nuovo layout.", export_btn: "Esporta backup", import_btn: "Importa backup", exported: "Backup esportato.", imported: "Importate {0} schede ({1} saltate), {2} immagini.", import_overwrite: "Alcune schede esistono già. Sovrascriverle?", import_err: "Backup non valido.", confirm_delete: 'Eliminare il layout "{0}"?',
     confirm_new: "Creare un nuovo layout? Le modifiche non salvate andranno perse.", active_set: '"{0}" è ora la schermata attiva sul citofono.',
     active_error: "Errore nell'impostare l'attiva.", ask_save_first: "Salva o carica prima un layout.",
     shown: 'Scheda "{0}" mostrata sul citofono (resta finché non cambi).', shown_dur: 'Scheda "{0}" mostrata sul citofono per {1}s.',
@@ -97,7 +97,7 @@ const I18N = {
     alignment: "Alignment", align_left: "Left", align_center: "Center", align_right: "Right", in_use: "in use",
     added: "Added: {0}", deleted: "Element deleted.", name_invalid: "Invalid name (letters, numbers, spaces, - _ ; max 40).",
     saved: "Saved: {0}", save_error: "Save failed.", loaded: "Loaded: {0}", load_error: "Could not load.",
-    layout_deleted: "Deleted: {0}", new_layout: "New layout.", export_btn: "Export backup", import_btn: "Import backup", exported: "Backup exported.", imported: "Imported {0} layouts ({1} skipped).", import_overwrite: "Some layouts already exist. Overwrite them?", import_err: "Invalid backup.", confirm_delete: 'Delete layout "{0}"?',
+    layout_deleted: "Deleted: {0}", new_layout: "New layout.", export_btn: "Export backup", import_btn: "Import backup", exported: "Backup exported.", imported: "Imported {0} layouts ({1} skipped), {2} images.", import_overwrite: "Some layouts already exist. Overwrite them?", import_err: "Invalid backup.", confirm_delete: 'Delete layout "{0}"?',
     confirm_new: "Create a new layout? Unsaved changes will be lost.", active_set: '"{0}" is now the active screen on the intercom.',
     active_error: "Could not set the active layout.", ask_save_first: "Save or load a layout first.",
     shown: 'Card "{0}" shown on the intercom (stays until changed).', shown_dur: 'Card "{0}" shown on the intercom for {1}s.',
@@ -302,8 +302,12 @@ function paintVisual(d, el) {
     const t2 = document.createElement("div"); t2.className = "el-text"; applyTextStyle(t2, el); t2.textContent = displayText(el); d.appendChild(t2);
   } else if (el.type === "template") {
     const t2 = document.createElement("div"); t2.className = "el-text"; applyTextStyle(t2, el);
-    // mostra l'anteprima HTML se disponibile, altrimenti il codice grezzo
+    // Ordine di preferenza: anteprima locale (_previewHtml), poi il valore risolto dal
+    // server (el.value = HTML markdown, usato nelle miniature via /api/layout-live),
+    // infine il codice grezzo come ultimo fallback.
     if (el._previewHtml) t2.innerHTML = el._previewHtml;
+    else if (el.value && el.rich) t2.innerHTML = el.value;
+    else if (el.value) t2.textContent = el.value;
     else t2.textContent = el.template || "";
     d.appendChild(t2);
   } else if (el.type === "image") {
@@ -375,7 +379,9 @@ function formatDateJS(value, pattern) {
 
 function displayText(el) {
   if (el.type === "text") return el.text || "";
-  let v = (el._preview !== undefined && el._preview !== null) ? el._preview : "—";
+  // _preview = anteprima live nell'editor; value = valore risolto dal server (miniature).
+  let v = (el._preview !== undefined && el._preview !== null) ? el._preview
+        : (el.value !== undefined && el.value !== null) ? el.value : "—";
   // formattazione data/ora se richiesta (prima della formattazione numerica)
   if (el.dateFormat) {
     const fd = formatDateJS(v, el.dateFormat);
@@ -1297,7 +1303,7 @@ function wireHome() {
           r = await fetch("api/import?overwrite=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dump) });
           res = await r.json();
         }
-        setStatus(t("imported", res.imported, res.skipped));
+        setStatus(t("imported", res.imported, res.skipped, res.images || 0));
         showHome(); refreshLayoutList();
       } catch (e) { setStatus(t("import_err")); }
       impFile.value = "";
@@ -1494,31 +1500,121 @@ async function loadServices() {
 // Mini-conversione oggetto <-> testo "chiave: valore" (una per riga). Accetta anche JSON.
 function dataToText(obj) {
   if (!obj || typeof obj !== "object") return "";
-  try { return Object.entries(obj).map(([k, v]) => k + ": " + (typeof v === "string" ? v : JSON.stringify(v))).join("\n"); }
-  catch { return ""; }
-}
-function textToData(txt) {
-  txt = (txt || "").trim();
-  if (!txt) return {};
-  // prova JSON puro
-  if (txt[0] === "{") { try { return JSON.parse(txt); } catch {} }
-  const out = {};
-  for (const line of txt.split("\n")) {
-    const l = line.trim(); if (!l || l[0] === "#") continue;
-    const i = l.indexOf(":"); if (i < 0) continue;
-    const k = l.slice(0, i).trim(); let v = l.slice(i + 1).trim();
-    // rimuovi le virgolette YAML circostanti ("..." o '...'), altrimenti finiscono
-    // nel valore e rompono i template Jinja (HA lo vedrebbe come stringa letterale).
-    if (v.length >= 2 && ((v[0] === '"' && v[v.length - 1] === '"') || (v[0] === "'" && v[v.length - 1] === "'"))) {
-      out[k] = v.slice(1, -1); // valore quotato: sempre stringa (anche se "123")
-      continue;
+  // Serializza in YAML indentato (coerente col parser textToData), così i "data"
+  // annidati (es. notify con data: > push: ...) restano leggibili e ri-editabili.
+  const SP = "  ";
+  function isTpl(s) { return typeof s === "string" && /\{\{|\{%/.test(s); }
+  function scalarToText(v) {
+    if (v === null) return "null";
+    if (typeof v === "boolean" || typeof v === "number") return String(v);
+    const s = String(v);
+    // quota se contiene caratteri ambigui, ma NON i template (li lasciamo nudi)
+    if (!isTpl(s) && /^\s|\s$|^[\[{]|: |#|^(true|false|null|~|-?\d+(\.\d+)?)$/.test(s)) {
+      return JSON.stringify(s);
     }
-    if (v === "true") v = true; else if (v === "false") v = false;
-    else if (v !== "" && !isNaN(Number(v))) v = Number(v);
-    else if ((v[0] === "[" || v[0] === "{") && !/^\{\{|^\{%/.test(v)) { try { v = JSON.parse(v); } catch {} }
-    out[k] = v;
+    return s;
   }
-  return out;
+  function emit(val, indent) {
+    const pad = SP.repeat(indent);
+    if (Array.isArray(val)) {
+      if (!val.length) return pad + "[]";
+      return val.map(item => {
+        if (item && typeof item === "object") {
+          const inner = emit(item, indent + 1).replace(/^\s+/, ""); // prima riga sul "- "
+          return pad + "- " + inner;
+        }
+        return pad + "- " + scalarToText(item);
+      }).join("\n");
+    }
+    if (val && typeof val === "object") {
+      const keys = Object.keys(val);
+      if (!keys.length) return pad + "{}";
+      return keys.map(k => {
+        const v = val[k];
+        if (v && typeof v === "object") {
+          const sub = emit(v, indent + 1);
+          return pad + k + ":\n" + sub;
+        }
+        return pad + k + ": " + scalarToText(v);
+      }).join("\n");
+    }
+    return pad + scalarToText(val);
+  }
+  try { return emit(obj, 0); } catch { return ""; }
+}
+function parseScalar(v) {
+  v = v.trim();
+  if (v === "") return "";
+  // virgolette YAML circostanti -> stringa letterale (preserva i template Jinja)
+  if (v.length >= 2 && ((v[0] === '"' && v[v.length - 1] === '"') || (v[0] === "'" && v[v.length - 1] === "'"))) {
+    return v.slice(1, -1);
+  }
+  if (v === "true") return true;
+  if (v === "false") return false;
+  if (v === "null" || v === "~") return null;
+  if (!isNaN(Number(v)) && !/^\{\{|^\{%/.test(v)) return Number(v);
+  // JSON inline (array/oggetto) ma non i template Jinja
+  if ((v[0] === "[" || v[0] === "{") && !/^\{\{|^\{%/.test(v)) { try { return JSON.parse(v); } catch {} }
+  return v;
+}
+// Parser YAML minimale ma con indentazione: supporta mappe annidate, liste ("- x")
+// e scalari. Sufficiente per i "data" delle azioni HA (es. notify con data: > push: ...).
+function textToData(txt) {
+  txt = (txt || "").replace(/\t/g, "  "); // tab -> 2 spazi
+  if (!txt.trim()) return {};
+  const t2 = txt.trim();
+  if (t2[0] === "{") { try { return JSON.parse(t2); } catch {} }
+
+  // righe con indentazione, saltando vuote e commenti
+  const lines = txt.split("\n")
+    .map(l => ({ indent: l.match(/^ */)[0].length, text: l.trim(), raw: l }))
+    .filter(l => l.text && l.text[0] !== "#");
+
+  let idx = 0;
+  function parseBlock(minIndent) {
+    const isList = idx < lines.length && lines[idx].text[0] === "-";
+    if (isList) {
+      const arr = [];
+      while (idx < lines.length && lines[idx].indent >= minIndent && lines[idx].text[0] === "-") {
+        const ln = lines[idx];
+        const rest = ln.text.slice(1).trim();
+        idx++;
+        if (rest === "") {
+          arr.push(parseBlock(minIndent + 1));
+        } else if (rest.includes(":") && !/^\{\{|^\{%/.test(rest.split(":")[0])) {
+          // "- chiave: valore": inizia una mappa; reinserisco la riga senza "- "
+          lines.splice(idx, 0, { indent: ln.indent + 2, text: rest });
+          arr.push(parseBlock(ln.indent + 2));
+        } else {
+          arr.push(parseScalar(rest));
+        }
+      }
+      return arr;
+    }
+    const obj = {};
+    while (idx < lines.length && lines[idx].indent >= minIndent) {
+      const ln = lines[idx];
+      const ci = ln.text.indexOf(":");
+      if (ci < 0) { idx++; continue; }
+      const key = ln.text.slice(0, ci).trim();
+      const val = ln.text.slice(ci + 1).trim();
+      idx++;
+      if (val === "") {
+        // blocco annidato se la riga successiva è più indentata di questa
+        if (idx < lines.length && lines[idx].indent > ln.indent) {
+          obj[key] = parseBlock(lines[idx].indent);
+        } else {
+          obj[key] = "";
+        }
+      } else {
+        obj[key] = parseScalar(val);
+      }
+    }
+    return obj;
+  }
+
+  const result = parseBlock(0);
+  return (result && typeof result === "object" && !Array.isArray(result)) ? result : {};
 }
 
 function btnLabel(key) {

@@ -59,7 +59,13 @@ app.use(express.json({ limit: "16mb" }));
 app.use(express.static(path.join(__dirname, "static"), {
     setHeaders: (res, p) => { if (/\.(html|js|css)$/.test(p)) res.setHeader("Cache-Control", "no-cache"); }
 }));
-app.use("/image", express.static(IMAGES_DIR));
+// no-cache su TUTTE le richieste /image (anche i 404), così un file mancante
+// subito dopo un reimport non resta "incollato" come 404 nella cache del browser.
+app.use("/image", (req, res, next) => { res.setHeader("Cache-Control", "no-cache"); next(); });
+app.use("/image", express.static(IMAGES_DIR, {
+    // Le immagini possono essere ricaricate/sostituite: rivalidazione ad ogni richiesta.
+    etag: true
+}));
 if (WWW_DIR) app.use("/ha-image", express.static(WWW_DIR));
 
 function safeName(name) { return typeof name === "string" && /^[A-Za-z0-9 _-]{1,40}$/.test(name); }
@@ -369,13 +375,25 @@ app.get("/api/export", async (req, res) => {
             const name = f.replace(/\.json$/, "");
             try { layouts[name] = JSON.parse(await fsp.readFile(path.join(LAYOUTS_DIR, f), "utf8")); } catch {}
         }
-        const dump = { app: "c100x-dashboard", version: 1, exportedAt: new Date().toISOString(), layouts };
+        // Incorpora anche le immagini caricate (come base64), così il backup è completo
+        // e reinstallando l'add-on non si perde nulla.
+        const images = {};
+        const imgFiles = (await fsp.readdir(IMAGES_DIR).catch(() => [])).filter(f => IMG_EXT.test(f));
+        for (const f of imgFiles) {
+            try {
+                const buf = await fsp.readFile(path.join(IMAGES_DIR, f));
+                const ext = (f.split(".").pop() || "png").toLowerCase();
+                const mime = ext === "svg" ? "image/svg+xml" : (ext === "jpg" ? "image/jpeg" : "image/" + ext);
+                images[f] = "data:" + mime + ";base64," + buf.toString("base64");
+            } catch {}
+        }
+        const dump = { app: "c100x-dashboard", version: 2, exportedAt: new Date().toISOString(), layouts, images };
         res.setHeader("Content-Disposition", 'attachment; filename="c100x-schede-backup.json"');
         res.setHeader("Content-Type", "application/json");
         res.send(JSON.stringify(dump, null, 2));
     } catch (e) { res.status(500).json({ error: String(e) }); }
 });
-// Import: ripristina schede da un backup. Query ?overwrite=1 per sovrascrivere le esistenti.
+// Import: ripristina schede (e immagini) da un backup. Query ?overwrite=1 per sovrascrivere.
 app.post("/api/import", async (req, res) => {
     try {
         const body = req.body || {};
@@ -392,7 +410,19 @@ app.post("/api/import", async (req, res) => {
             await fsp.writeFile(layoutPath(name), JSON.stringify(clean, null, 2));
             imported++;
         }
-        res.json({ ok: true, imported, skipped });
+        // Ripristina le immagini incorporate nel backup (versione 2+).
+        let images = 0;
+        if (body.images && typeof body.images === "object") {
+            const existingImg = new Set(await fsp.readdir(IMAGES_DIR).catch(() => []));
+            for (const [fname, dataUrl] of Object.entries(body.images)) {
+                if (!safeFile(fname) || typeof dataUrl !== "string") continue;
+                if (existingImg.has(fname) && !overwrite) continue;
+                const m = dataUrl.match(/^data:image\/[\w.+-]+;base64,(.+)$/);
+                if (!m) continue;
+                try { await fsp.writeFile(path.join(IMAGES_DIR, fname), Buffer.from(m[1], "base64")); images++; } catch {}
+            }
+        }
+        res.json({ ok: true, imported, skipped, images });
     } catch (e) { res.status(500).json({ error: String(e) }); }
 });
 app.get("/api/layouts/:name", async (req, res) => {

@@ -428,6 +428,9 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 /* cornette: pulsanti più grandi (come da foto reale) */
 .shell-btn.phone { width: 104px; height: 66px; }
 .shell-btn.phone .i { width: 34px; height: 34px; }
+/* rotella: pulsanti piccoli e tondi sul lato destro */
+.shell-btn.wheel { width: 44px; height: 44px; border-radius: 50%; }
+.shell-btn.wheel .i { width: 24px; height: 24px; }
 /* cornetta sinistra = rispondi (verde), destra = riaggancia (rossa) */
 .shell-btn.phone-answer { color: #1a9e4b; }
 .shell-btn.phone-answer:hover { border-color: #1a9e4b; }
