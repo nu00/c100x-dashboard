@@ -30,6 +30,7 @@
     <input id="showDur" type="number" min="0" max="600" value="0" data-i18n-title="t_duration" style="width:64px">
     <button id="btnShow" class="accent" data-i18n-title="t_show_now" data-i18n="show_now">Mostra ora</button>
     <button id="btnCito" data-i18n-title="t_intercom" data-i18n="intercom">Citofono</button>
+    <button id="btnLive" data-i18n-title="t_live" data-i18n="live">Live</button>
     <select id="langSel" title="Language"><option value="it">IT</option><option value="en">EN</option></select>
   </div>
 </header>
@@ -158,7 +159,7 @@
 <div id="citoModal" class="modal" hidden>
   <div class="modal-box">
     <h2 data-i18n="m_title">Citofono — installazione via SSH</h2>
-    <p class="hint" data-i18n="m_hint">Carica la pagina sul citofono, applica la patch e riavvia. Richiede SSH attivo sul citofono. Viene salvato un backup di main.qml.</p>
+    <p class="hint" data-i18n="m_hint">Carica la pagina sul citofono, applica la patch e riavvia. Sostituisce anche il bundle di c300x-controller con una versione che aggiunge il supporto avvio/stop della visualizzazione live (backup automatico). Richiede SSH attivo sul citofono.</p>
     <div class="field"><label data-i18n="m_host">Host / IP del citofono</label><input id="cf_host" type="text" placeholder="192.168.1.50" autocomplete="off"></div>
     <div class="field inline">
       <div class="field"><label data-i18n="m_port">Porta</label><input id="cf_port" type="number" value="22"></div>
@@ -181,6 +182,56 @@
   </div>
 </div>
 
+<div id="liveModal" class="modal" hidden>
+  <div class="modal-box modal-box-wide">
+    <button id="lv_x" class="lv-x" data-i18n-title="m_close" title="Chiudi" aria-label="Chiudi">&times;</button>
+    <h2 data-i18n="lv_title">Visualizzazione live (VNC)</h2>
+    <p class="hint" data-i18n="lv_hint">Solo visualizzazione, si aggiorna qualche volta al secondo. Consuma risorse sul citofono: si ferma da sola dopo 30s se chiudi senza premere "Ferma".</p>
+    <div class="lv-shellwrap" id="lv_shellwrap">
+      <div class="cito-shell" id="lv_shell">
+        <div class="cito-glass"></div>
+        <span class="cito-sensor"></span>
+        <span class="cito-sideicons">
+          <svg class="i"><use href="#ic-wifi"/></svg>
+          <svg class="i"><use href="#ic-bell"/></svg>
+        </span>
+        <div class="screen" id="lv_screen">
+          <div id="lv_canvas_target"></div>
+          <div id="lv_placeholder" class="lv-placeholder" data-i18n="lv_loading">In connessione…</div>
+        </div>
+        <div id="lv_citoButtons">
+          <button class="shell-btn" data-btn="1" title="Tasto 1" style="left:20.6%;top:68.9%"><span class="dots d1"><span></span></span></button>
+          <button class="shell-btn" data-btn="2" title="Tasto 2" style="left:40.1%;top:68.9%"><span class="dots d2"><span></span><span></span></span></button>
+          <button class="shell-btn" data-btn="3" title="Tasto 3" style="left:59.8%;top:68.9%"><span class="dots d3"><span></span><span></span><span></span></span></button>
+          <button class="shell-btn" data-btn="4" title="Tasto 4" style="left:79.2%;top:68.9%"><span class="dots d4"><span></span><span></span><span></span><span></span></span></button>
+          <button class="shell-btn ic" data-btn="5" data-i18n-title="lv_b5" title="Luce scale (5)" style="left:30.4%;top:77%"><svg class="i"><use href="#ic-star"/></svg></button>
+          <button class="shell-btn ic" data-btn="6" data-i18n-title="lv_b6" title="Apri serratura (6)" style="left:50%;top:77%"><svg class="i"><use href="#ic-key"/></svg></button>
+          <button class="shell-btn ic" data-btn="7" data-i18n-title="lv_b7" title="Cambia telecamera (7)" style="left:69.5%;top:77%"><svg class="i"><use href="#ic-eye"/></svg></button>
+          <span class="cito-divider"></span>
+          <button class="shell-btn wheel" data-btn="up" title="Rotella su" style="left:93%;top:60%"><svg class="i"><use href="#ic-chevron-up"/></svg></button>
+          <button class="shell-btn wheel" data-btn="ok" title="Rotella OK" style="left:93%;top:68%"><svg class="i"><use href="#ic-wheel-ok"/></svg></button>
+          <button class="shell-btn wheel" data-btn="down" title="Rotella giù" style="left:93%;top:76%"><svg class="i"><use href="#ic-chevron-down"/></svg></button>
+          <button class="shell-btn phone phone-answer" data-btn="call" data-i18n-title="lv_bcall" title="Rispondi" style="left:12.5%;top:91.8%"><svg class="i"><use href="#ic-phone"/></svg></button>
+          <button class="shell-btn phone phone-hangup" data-btn="hangup" data-i18n-title="lv_bhangup" title="Riattacca" style="left:85.8%;top:91.8%"><svg class="i"><use href="#ic-phone-down"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="lv-feedback-row">
+      <span id="lv_feedback" class="lv-feedback" data-i18n="lv_feedback_none">Nessun tasto premuto</span>
+      <select id="lv_scheda_select" class="lv-scheda-select"></select>
+      <button id="lv_scheda_show" data-i18n="show_now">Mostra ora</button>
+    </div>
+    <div class="modal-actions">
+      <button id="lv_stop" data-i18n="lv_stop">Ferma</button>
+    </div>
+    <pre id="lv_log" class="cf-log" hidden></pre>
+  </div>
+</div>
+
+<script type="module">
+  import RFB from './novnc/core/rfb.js';
+  window.RFB = RFB;
+</script>
 <script src="editor.js?v=0.10.1"></script>
 </body>
 </html>

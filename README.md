@@ -102,17 +102,50 @@ on the intercom. From the home screen you can **export** all screens to a backup
 
 Press **Intercom** in the editor, enter the intercom's SSH host/user/password and the
 **add-on URL as the intercom sees it** (e.g. `http://192.168.1.10:8099`), then
-**Install / update**. The add-on uploads `SchedaPage.qml`, patches `main.qml` (with a backup)
-and reboots. A checkbox lets you store the SSH password in the add-on or be asked each time.
+**Install / update**. This uploads `SchedaPage.qml`, patches `main.qml` (with a backup),
+patches `MainPage.qml` — the native default menu — to enable wheel navigation there too
+(a single added `property`, backed up first), uploads the live-view component and the
+`ptrace-inject` button-injection tool (see below), **replaces the
+[c300x-controller](https://github.com/slyoldfox/c300x-controller) bundle** on the intercom
+with a build that adds start/stop support for both (original bundle backed up first, its
+`:8080` page also got a small visual refresh and is now fully in English), and reboots. A
+checkbox lets you store the SSH password in the add-on or be asked each time.
 
 Prefer manual install? See `c100x_dashboard/citofono/README.md`.
+
+## Live screen view & remote control
+
+Press **Live** in the editor for a real, interactive mirror of the intercom's screen: the
+add-on proxies a WebSocket connection through to a small VNC server on the intercom, and
+[noVNC](https://github.com/novnc/noVNC) (a mature, vendored library) handles the actual
+protocol in the browser — this replaced an earlier, simpler approach (the add-on polling a
+still image) that turned out to be too heavy for the intercom's weak CPU and could lock up
+its VNC server under load.
+
+While it's open you also get a button panel (1-7, wheel up/down/OK, answer/hang up/mute)
+that **really presses the intercom's own buttons at the system level**: a small tool
+(`ptrace-inject`) attaches to the intercom's graphics process and injects the press directly
+into its system calls, indistinguishable from a physical press as far as the firmware is
+concerned. Unlike an approach based on calling QML functions, this works **everywhere** —
+inside screens created with this add-on, and in the intercom's native default menu too.
+
+This needs the custom controller bundle mentioned above (it's what starts/stops both the VNC
+server and the injector on the intercom), so both are part of the standard SSH install now,
+not optional.
+
+> **A note on risk.** System-level injection via `ptrace` is inherently more invasive than a
+> plain QML function call — during development it caused one intercom reboot (not reproduced
+> since, after a fix: it now delivers one input event at a time, matching how the real device
+> driver behaves). For this reason the injector is only started while the Live view is open,
+> and stopped a few seconds after you close it or lose connection — it is **not** meant to run
+> as a permanent background service.
 
 ## Install the integration (optional)
 
 The integration is **separate from the add-on** and is **not installed automatically** — the
 add-on can't write into HA's `custom_components/`. You only need it if you want the convenient
-`show` / `hide` / `set_active` services in your automations; without it you can still drive the
-add-on over REST (see below).
+`show` / `hide` / `set_active` services in your automations, or the sensor/light entities below;
+without it you can still drive the add-on over REST (see below).
 
 1. Copy `custom_components/c100x_dashboard/` into your HA `config/custom_components/`
    (or add this repo to HACS as a custom *integration*).
@@ -120,10 +153,13 @@ add-on over REST (see below).
 3. Settings → Devices & Services → **Add integration → C100X Dashboard**, and enter the add-on URL
    (e.g. `http://192.168.1.10:8099`).
 
+See [`custom_components/c100x_dashboard/CHANGELOG.md`](custom_components/c100x_dashboard/CHANGELOG.md)
+for the integration's own version history (independent of the add-on's).
+
 ## Entities exposed by the integration
 
-Besides the `show`/`hide`/`set_active` services, the integration creates a few read-only
-entities under the same device:
+Besides the `show`/`hide`/`set_active` services, the integration creates a few entities
+under the same device:
 
 - **Intercom renderer** (`update.*`) — tracks whether the QML patch on the intercom matches the
   one shipped by this add-on version.
@@ -136,6 +172,8 @@ entities under the same device:
   over LTE. Detected at the OpenWebNet bus level, not the network level, so it covers all of the
   above with a single mechanism. Requires MQTT — see below.
 - **Ponte MQTT citofono online** (`binary_sensor.*`) — whether the MQTT bridge below is reachable.
+- **Retroilluminazione display** (`light.*`) — the intercom display's backlight. Reflects the real
+  state (read every ~2s) and can be turned on/off directly from Home Assistant.
 
 ### MQTT-based occupancy detection (optional)
 
@@ -212,6 +250,11 @@ rest_command:
 | GET | `/api/entities` · `/api/icons` · `/api/entity-icons` | autocomplete sources |
 | GET | `/icon/:name` · `/image/:name` · `/ha-image/:name` | icons / images for editor + intercom |
 | POST | `/api/citofono/install` | upload + patch + reboot via SSH |
+| POST | `/api/live/start` · `/api/live/stop` | start/stop the live view (VNC + button injector) on the intercom |
+| WS | `/api/live/ws` | WebSocket↔TCP proxy to the intercom's VNC server, consumed by noVNC |
+| POST | `/api/live/button` | press/release a real intercom button (`{button, phase}`) — proxied to the controller's `ptrace-inject` endpoint |
+| GET/POST | `/api/backlight-state` | current backlight state, reported live by the patched QML |
+| GET/POST | `/api/backlight-command` | request the intercom to turn the backlight on/off |
 | GET | `/active` | for the intercom: active layout with resolved values |
 
 ## Notes & limits
@@ -224,6 +267,8 @@ rest_command:
   intercom renders an HTML subset (Qt 5 RichText), so very complex markdown may not render exactly.
 - The SSH password, if saved, is stored in the add-on's `/data` in clear text and never returned
   to the browser.
+- The live view uses real CPU on the intercom (VNC server + button injector): fine for occasional
+  use, but not meant to be left running continuously — see the risk note above about `ptrace`.
 
 ## Credits
 
@@ -232,6 +277,7 @@ This project stands on the shoulders of prior reverse-engineering work by the BT
 - [slyoldfox/c300x-controller](https://github.com/slyoldfox/c300x-controller) — the on-device controller this project relies on (Node runtime, HTTP endpoints, Home Assistant bridge).
 - [slyoldfox/c300x-dashboard](https://github.com/slyoldfox/c300x-dashboard) — the inspiration: a controller-fed QML dashboard for the C300X (Qt 4.8.7 / QtQuick 1.x). Since it states *"Bticino c100x devices are untested"* and targets a different Qt/QtQuick generation, the renderer here was written from scratch for the C100X (Qt5 / QtQuick 2.x).
 - [fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) — the modified firmware that makes root/SSH access possible.
+- [novnc/noVNC](https://github.com/novnc/noVNC) — the VNC client library (vendored) that powers the live screen view in the browser.
 - [Roboto](https://fonts.google.com/specimen/Roboto) (Apache License 2.0) — the bundled UI font, shared by the editor and the intercom renderer.
 
 ## License

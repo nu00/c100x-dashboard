@@ -218,6 +218,29 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .modal-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .8rem; }
 .modal-actions button { flex: 1; min-width: 120px; }
 .cf-log { margin-top: .8rem; background: #0a0e16; border: 1px solid var(--line); border-radius: 6px; padding: .6rem .7rem; font-family: var(--mono); font-size: .76rem; white-space: pre-wrap; word-break: break-word; color: #cdd6e6; max-height: 200px; overflow-y: auto; }
+.modal-box-wide { width: 620px; position: relative; }
+.lv-x {
+  position: absolute; top: .7rem; right: .7rem; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; line-height: 1; padding: 0; border-radius: 6px;
+  background: transparent; border: 1px solid transparent;
+}
+.lv-x:hover { background: var(--panel-2); border-color: var(--line); }
+.lv-shellwrap { position: relative; overflow: hidden; margin: 0 auto .8rem; }
+.lv-shellwrap .cito-shell { transform-origin: top left; }
+#lv_canvas_target { position: absolute; inset: 0; width: 100%; height: 100%; }
+#lv_canvas_target canvas { display: block; width: 100% !important; height: 100% !important; }
+.lv-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #9a968e; font-size: 22px; line-height: 1.4; text-align: center; padding: 0 70px; background: #000; z-index: 1; }
+.lv-placeholder.lv-hidden { display: none; }
+.shell-btn[disabled] { opacity: .35; cursor: not-allowed; }
+.shell-btn[disabled]:hover { border-color: #dcd9d2; box-shadow: none; }
+.lv-feedback-row { display: flex; align-items: center; gap: .5rem; margin-top: .3rem; }
+.lv-feedback { flex: 1 1 auto; font-size: .85rem; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lv-scheda-select {
+  flex: 0 0 auto; max-width: 160px; background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 6px; padding: .35rem .5rem; font-size: .85rem;
+}
+#lv_scheda_show { flex: 0 0 auto; }
 
 /* ---- Selettore lingua ---- */
 #langSel { width: 52px; padding: .3rem; }

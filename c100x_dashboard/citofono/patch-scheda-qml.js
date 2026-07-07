@@ -32,6 +32,50 @@ const BLOCK = `
         s.setRequestHeader("Content-Type", "application/json");
         s.send(JSON.stringify({ name: name || null }));
     }
+
+    // La simulazione pulsanti via QML e' stata rimossa: la vista live ora
+    // usa l'iniettore ptrace sul citofono (endpoint /ptrace-inject del
+    // controller), che agisce a livello di syscall — indistinguibile da una
+    // pressione fisica vera per il firmware, funziona ovunque (menu nativo
+    // incluso), non solo dentro le nostre schede. Qui restano solo le
+    // funzioni per la retroilluminazione (entita' light in HA).
+    function dashScreenOff() { return global.screenState.state === ScreenState.ScreenOff; }
+    function dashWakeScreen() { global.screenState.enableState(ScreenState.ForcedNormal); }
+
+    property bool dashLastReportedBacklight: true // valore iniziale qualunque, il primo giro riporta comunque
+    property bool dashBacklightReportedOnce: false
+    function dashReportBacklight(on) {
+        if (dashBacklightReportedOnce && on === dashLastReportedBacklight) return;
+        dashBacklightReportedOnce = true;
+        dashLastReportedBacklight = on;
+        var s = new XMLHttpRequest();
+        s.open("POST", schedaWatcher.addonBase + "/api/backlight-state");
+        s.setRequestHeader("Content-Type", "application/json");
+        s.send(JSON.stringify({ on: on }));
+    }
+    Timer {
+        id: backlightPoller
+        interval: 300
+        running: true
+        repeat: true
+        onTriggered: {
+            dashReportBacklight(!dashScreenOff());
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                    try {
+                        var d = JSON.parse(xhr.responseText);
+                        var cmds = d.commands || [];
+                        for (var i = 0; i < cmds.length; i++) {
+                            if (cmds[i].on) dashWakeScreen(); else global.turnOffScreen();
+                        }
+                    } catch (e) {}
+                }
+            };
+            xhr.open("GET", schedaWatcher.addonBase + "/api/backlight-pending");
+            xhr.send();
+        }
+    }
     Component {
         id: schedaPage
         SchedaPage {

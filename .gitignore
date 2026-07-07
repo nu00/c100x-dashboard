@@ -13,3 +13,7 @@ main.qml.ORIGINALE
 Thumbs.db
 .vscode/
 .idea/
+
+# Python (integrazione)
+__pycache__/
+*.pyc

@@ -11,11 +11,11 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
-from .coordinator import C100xActiveSchedaCoordinator, C100xStatusCoordinator
+from .coordinator import C100xActiveSchedaCoordinator, C100xBacklightCoordinator, C100xStatusCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.UPDATE, Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS = [Platform.UPDATE, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.LIGHT]
 
 SHOW_SCHEMA = vol.Schema({
     vol.Optional("name"): cv.string,
@@ -39,10 +39,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # sensore accessorio, riproverà da solo secondo il suo scan interval.
         _LOGGER.warning("Primo fetch di /api/scheda-state fallito: %s", err)
 
+    backlight_coordinator = C100xBacklightCoordinator(hass, base)
+    try:
+        await backlight_coordinator.async_config_entry_first_refresh()
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Primo fetch di /api/backlight-state fallito: %s", err)
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "url": base,
         "coordinator": coordinator,
         "active_scheda_coordinator": active_scheda_coordinator,
+        "backlight_coordinator": backlight_coordinator,
     }
 
     session = async_get_clientsession(hass)

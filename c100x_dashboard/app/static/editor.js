@@ -8,6 +8,12 @@ const I18N = {
     t_set_active: "Imposta come schermata mostrata sul citofono", t_duration: "durata in secondi (0 = resta)",
     show_now: "Mostra ora", t_show_now: "Mostra subito la scheda sul citofono", intercom: "Citofono",
     t_intercom: "Installa sul citofono via SSH", add: "Aggiungi", el_text: "Testo", el_entity: "Valore sensore",
+    live: "Live", t_live: "Visualizzazione live dello schermo del citofono (VNC, sola visualizzazione)",
+    lv_title: "Visualizzazione live (VNC)", lv_hint: "Solo visualizzazione, si aggiorna qualche volta al secondo. Consuma risorse sul citofono: si ferma da sola dopo 30s se chiudi senza premere \"Ferma\".",
+    lv_loading: "In connessione…", lv_stop: "Ferma", lv_stopped: "Fermato", lv_reconnecting: "Riconnessione…",
+    lv_confirm_lock: "Aprire davvero la serratura?",
+    lv_restart: "Riavvia",
+    lv_feedback_none: "Nessun tasto premuto", lv_feedback_pressed: "Tasto {0} premuto",
     el_image: "Immagine", el_icon: "Icona", el_entity_icon: "Icona entità", el_rect: "Rettangolo", el_circle: "Cerchio", el_triangle: "Triangolo",
     el_template: "Template", template_code: "Codice (Jinja2 + markdown)", template_hint: "Come una card markdown di Lovelace. Es: **Temp:** {{ states('sensor.temp') }}°C", template_preview: "Anteprima", template_refresh: "Aggiorna anteprima",
     color_template: "Colore condizionale (Jinja2)", color_template_hint: "Opzionale. Può ritornare un colore (es. #ff0000) oppure true/false per usare i due colori sotto.", color_if_true: "Colore se vero", color_if_false: "Colore se falso",
@@ -61,6 +67,12 @@ const I18N = {
     t_set_active: "Set as the screen shown on the intercom", t_duration: "duration in seconds (0 = stays)",
     show_now: "Show now", t_show_now: "Show the card on the intercom now", intercom: "Intercom",
     t_intercom: "Install on the intercom via SSH", add: "Add", el_text: "Text", el_entity: "Sensor value",
+    live: "Live", t_live: "Live view of the intercom's screen (VNC, view-only)",
+    lv_title: "Live view (VNC)", lv_hint: "View-only, refreshes a few times per second. Uses resources on the intercom: stops itself after 30s if you close without pressing \"Stop\".",
+    lv_loading: "Connecting…", lv_stop: "Stop", lv_stopped: "Stopped", lv_reconnecting: "Reconnecting…",
+    lv_confirm_lock: "Really open the lock?",
+    lv_restart: "Restart",
+    lv_feedback_none: "No button pressed yet", lv_feedback_pressed: "Button {0} pressed",
     el_image: "Image", el_icon: "Icon", el_entity_icon: "Entity icon", el_rect: "Rectangle", el_circle: "Circle", el_triangle: "Triangle",
     el_template: "Template", template_code: "Code (Jinja2 + markdown)", template_hint: "Like a Lovelace markdown card. E.g: **Temp:** {{ states('sensor.temp') }}°C", template_preview: "Preview", template_refresh: "Refresh preview",
     color_template: "Conditional color (Jinja2)", color_template_hint: "Optional. Can return a color (e.g. #ff0000) or true/false to use the two colors below.", color_if_true: "Color if true", color_if_false: "Color if false",
@@ -1169,6 +1181,167 @@ document.getElementById("cf_install").addEventListener("click", async () => {
   btn.disabled = false;
 });
 
+/* modale Live (VNC), tramite noVNC (vedi window.RFB, caricato come modulo in index.html) */
+const liveModal = document.getElementById("liveModal");
+const lvCanvasTarget = document.getElementById("lv_canvas_target");
+const lvPlaceholder = document.getElementById("lv_placeholder");
+const lvLog = document.getElementById("lv_log");
+let lvRfb = null;
+let lvWantConnected = false; // false dopo Ferma/Chiudi: se la connessione cade da sola, NON riproviamo
+
+function setLvLog(text) { lvLog.hidden = false; lvLog.textContent = text; }
+function lvSetPlaceholder(text) { lvPlaceholder.textContent = text; lvPlaceholder.classList.remove("lv-hidden"); }
+
+function lvWsUrl() {
+  const u = new URL("api/live/ws", location.href);
+  u.protocol = (u.protocol === "https:") ? "wss:" : "ws:";
+  return u.href;
+}
+
+const SHELL_W = 1227, SHELL_H = 1228;
+function lvFitShell() {
+  const wrap = document.getElementById("lv_shellwrap");
+  const shell = document.getElementById("lv_shell");
+  const w = wrap.clientWidth || wrap.getBoundingClientRect().width;
+  const scale = w / SHELL_W;
+  shell.style.transform = "scale(" + scale + ")";
+  wrap.style.height = Math.round(SHELL_H * scale) + "px";
+}
+
+function lvConnectRfb() {
+  if (lvRfb) { try { lvRfb.disconnect(); } catch (_) { /* noop */ } lvRfb = null; }
+  lvCanvasTarget.innerHTML = "";
+  lvSetPlaceholder(t("lv_loading"));
+  const rfb = new RFB(lvCanvasTarget, lvWsUrl());
+  rfb.viewOnly = true;       // l'interazione passa dai nostri pulsanti (azioni reali), non da mouse/tastiera sul canvas
+  rfb.scaleViewport = false; // risoluzione nativa 800x480: alla scala visiva ci pensa gia' .cito-shell
+  rfb.resizeSession = false;
+  rfb.addEventListener("connect", () => { lvPlaceholder.classList.add("lv-hidden"); });
+  rfb.addEventListener("disconnect", () => {
+    lvRfb = null;
+    if (!lvWantConnected) return; // fermato volontariamente: nessun retry
+    lvSetPlaceholder(t("lv_reconnecting"));
+    setTimeout(() => { if (lvWantConnected) lvConnectRfb(); }, 1000);
+  });
+  rfb.addEventListener("securityfailure", (e) => {
+    setLvLog("VNC: " + ((e.detail && e.detail.reason) || "?"));
+  });
+  lvRfb = rfb;
+}
+
+async function openLive() {
+  liveModal.hidden = false;
+  lvFitShell();
+  lvLog.hidden = true;
+  lvSetPlaceholder(t("lv_loading"));
+  lvFeedbackEl.textContent = t("lv_feedback_none");
+  lvLoadSchedaList();
+  const stopBtn = document.getElementById("lv_stop");
+  stopBtn.textContent = t("lv_stop");
+  stopBtn.dataset.mode = "stop";
+  lvWantConnected = true;
+  try {
+    const r = await fetch("api/live/start", { method: "POST" });
+    const d = await r.json();
+    if (!d.ok) { setLvLog(d.error || "?"); lvWantConnected = false; return; }
+  } catch (e) { setLvLog(t("m_log_neterr", e.message)); lvWantConnected = false; return; }
+  // fb-vnc.js impiega un istante ad aprire /dev/fb1 e legare la porta dopo lo spawn
+  setTimeout(() => { if (lvWantConnected) lvConnectRfb(); }, 600);
+}
+
+async function stopLive() {
+  lvWantConnected = false;
+  if (lvRfb) { try { lvRfb.disconnect(); } catch (_) { /* noop */ } lvRfb = null; }
+  try { await fetch("api/live/stop", { method: "POST" }); } catch (e) { /* non bloccante */ }
+}
+
+function closeLive() {
+  stopLive();
+  liveModal.hidden = true;
+}
+
+document.getElementById("btnLive").addEventListener("click", openLive);
+document.getElementById("lv_stop").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  if (btn.dataset.mode === "stop") {
+    await stopLive();
+    lvSetPlaceholder(t("lv_stopped"));
+    btn.textContent = t("lv_restart");
+    btn.dataset.mode = "restart";
+  } else {
+    await openLive();
+  }
+});
+document.getElementById("lv_x").addEventListener("click", closeLive);
+liveModal.addEventListener("click", (e) => { if (e.target === liveModal) closeLive(); });
+window.addEventListener("resize", () => { if (!liveModal.hidden) lvFitShell(); });
+
+/* pulsanti live: press/release reali sul citofono, nessuna interpretazione dello schermo */
+const lvFeedbackEl = document.getElementById("lv_feedback");
+function lvButtonLabel(id) {
+  const map = {
+    "1": "Tasto 1", "2": "Tasto 2", "3": "Tasto 3", "4": "Tasto 4",
+    "5": "Stella", "6": "Serratura", "7": "Occhio",
+    "up": "Rotella su", "down": "Rotella giù", "ok": "Rotella OK",
+    "call": "Cornetta rispondi", "hangup": "Cornetta riaggancia"
+  };
+  return map[id] || id;
+}
+function lvSendButton(id, phase) {
+  fetch("api/live/button", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ button: id, phase }) }).catch(() => {});
+  if (phase === "press") lvFeedbackEl.textContent = t("lv_feedback_pressed", lvButtonLabel(id));
+}
+document.querySelectorAll("#lv_citoButtons .shell-btn:not([disabled])").forEach((btn) => {
+  const id = btn.dataset.btn;
+  let pressed = false;
+  const doPress = (e) => {
+    e.preventDefault();
+    if (pressed) return;
+    if (id === "6" && !confirm(t("lv_confirm_lock"))) return;
+    pressed = true;
+    lvSendButton(id, "press");
+  };
+  const doRelease = () => {
+    if (!pressed) return;
+    pressed = false;
+    lvSendButton(id, "release");
+  };
+  btn.addEventListener("mousedown", doPress);
+  btn.addEventListener("touchstart", doPress, { passive: false });
+  btn.addEventListener("mouseup", doRelease);
+  btn.addEventListener("mouseleave", doRelease);
+  btn.addEventListener("touchend", doRelease);
+  btn.addEventListener("touchcancel", doRelease);
+});
+
+/* dropdown "mostra un'altra scheda" durante la visualizzazione live */
+async function lvLoadSchedaList() {
+  const sel = document.getElementById("lv_scheda_select");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  try {
+    const names = (await (await fetch("api/layouts")).json()).layouts || [];
+    for (const n of names) {
+      const opt = document.createElement("option");
+      opt.value = n; opt.textContent = n;
+      sel.appendChild(opt);
+    }
+    if (names.includes(prev)) sel.value = prev;
+  } catch (e) { /* silenzioso */ }
+}
+document.getElementById("lv_scheda_show").addEventListener("click", async () => {
+  const name = document.getElementById("lv_scheda_select").value;
+  if (!name) return;
+  try {
+    await fetch("api/show", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  } catch (e) { /* silenzioso */ }
+});
+// Se il browser chiude/ricarica la pagina, prova comunque a fermare il VNC lato citofono
+// (rete di sicurezza aggiuntiva: l'add-on lo fa comunque da solo dopo 30s se questo non arriva).
+window.addEventListener("beforeunload", () => {
+  if (lvWantConnected) { navigator.sendBeacon && navigator.sendBeacon("api/live/stop"); }
+});
+
 /* selettore lingua */
 const langSel = document.getElementById("langSel");
 langSel.value = LANG;
@@ -1633,8 +1806,11 @@ function refreshFaceplate() {
       g.classList.toggle("selected", btnSelected === k);
     });
   }
-  // ...sia i tasti della scocca attorno al canvas dell'editor.
-  document.querySelectorAll(".shell-btn").forEach(b => {
+  // ...sia i tasti della scocca attorno al canvas dell'editor (NON quelli nel
+  // modale live: quella e' una scocca a parte, l'evidenziazione "configurato"
+  // non ha senso li' — i tasti nella vista live premono il tasto vero via
+  // iniezione di sistema, a prescindere da qualunque config di scheda).
+  document.querySelectorAll("#citoButtons .shell-btn").forEach(b => {
     const k = b.dataset.btn;
     const cfg = layout.buttons && layout.buttons[k];
     b.classList.toggle("assigned", !!(cfg && (cfg.action || cfg.light || (cfg.toast && cfg.toast.text))));

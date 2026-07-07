@@ -272,6 +272,25 @@ FocusScope {
     //   - illuminazione ON  -> NON accettiamo -> il firmware accende il LED (e, se il
     //     tasto ha una funzione nativa, la esegue anche).
     // I tasti NON configurati mantengono il comportamento nativo (rotella = chiudi).
+    // Rotella: se il tasto ha un'azione la esegue, altrimenti chiude la scheda.
+    // Funzione a se' stante (non solo codice in Keys.onPressed) cosi' anche la
+    // simulazione da remoto puo' chiamarla e ottenere ESATTAMENTE lo stesso
+    // comportamento, invece di doverlo reimplementare a parte.
+    function handleWheelKey(key) {
+        var rr = handleButton(key);
+        if (rr === 0) root.back(); // non configurato: chiudi (0.8.0)
+        return rr;
+    }
+
+    // Le "function" dichiarate qui non sono affidabilmente raggiungibili da
+    // fuori file tramite un riferimento preso da StackView.currentItem (bug/
+    // limite QML riscontrato empiricamente: il tasto fisico funziona perche'
+    // la chiamata resta interna a questo stesso file, ma dall'esterno la
+    // property risulta assente). Una "property" invece e' sempre raggiungibile:
+    // la usiamo per esporre le stesse funzioni alla simulazione da remoto.
+    property var dashHandleButton: handleButton
+    property var dashHandleWheelKey: handleWheelKey
+
     Keys.onPressed: {
         if (root.debugKeys) { showToast("key=" + event.key + " text='" + event.text + "'", 2); return; }
         // Tasti carattere del frontalino: '1'..'7'
@@ -282,12 +301,11 @@ FocusScope {
             // r === 2: gestito ma lasciamo passare (LED acceso); r === 0: non nostro
             return;
         }
-        // Rotella: OK/su/giu per keycode Qt. Se il tasto ha un'azione la esegue;
-        // altrimenti chiude la scheda SENZA accettare (comportamento sicuro 0.8.0).
+        // Rotella: OK/su/giu per keycode Qt.
         var rr = 0;
-        if (event.key === 16777220) rr = handleButton("ok");        // Qt.Key_Return / OK
-        else if (event.key === 16777235) rr = handleButton("up");   // Qt.Key_Up
-        else if (event.key === 16777237) rr = handleButton("down"); // Qt.Key_Down
+        if (event.key === 16777220) rr = handleWheelKey("ok");        // Qt.Key_Return / OK
+        else if (event.key === 16777235) rr = handleWheelKey("up");   // Qt.Key_Up
+        else if (event.key === 16777237) rr = handleWheelKey("down"); // Qt.Key_Down
         else if (event.key === 17825797) {                          // cornetta destra (riaggancia)
             // Le cornette hanno funzione telefonica nativa fortissima: eseguiamo
             // l'eventuale azione HA ma NON accettiamo mai l'evento, così il firmware
@@ -301,7 +319,7 @@ FocusScope {
         }
         else return;
         if (rr === 1) event.accepted = true;      // gestito, LED spento
-        else if (rr === 0) root.back();           // non configurato: chiudi (0.8.0)
+        // rr === 0: root.back() gia' chiamato dentro handleWheelKey()
         // rr === 2: gestito, lasciamo passare (LED acceso, e il firmware fa il resto)
     }
 }

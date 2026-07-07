@@ -15,10 +15,10 @@ const path = require("path");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.10.0";
+const VERSION = "0.12.0";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "7";
+const RENDERER_VERSION = "16";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -731,10 +731,14 @@ app.post("/api/citofono/install", async (req, res) => {
     if (!/^https?:\/\/[A-Za-z0-9._-]+(:\d+)?$/.test(addonBase)) return res.status(400).json({ ok: false, error: "URL add-on non valido (es. http://192.168.1.10:8099)" });
     if (!/^[A-Za-z0-9._/-]+$/.test(nodePath)) return res.status(400).json({ ok: false, error: "percorso node non valido" });
 
-    let qml, patch;
+    let qml, patch, vncScript, controllerBundle, mainPagePatch, ptraceInject;
     try {
         qml = fs.readFileSync(path.join(CITOFONO_DIR, "SchedaPage.qml"), "utf8");
         patch = fs.readFileSync(path.join(CITOFONO_DIR, "patch-scheda-qml.js"), "utf8");
+        vncScript = fs.readFileSync(path.join(CITOFONO_DIR, "fb-vnc.js"), "utf8");
+        controllerBundle = fs.readFileSync(path.join(CITOFONO_DIR, "controller-bundle-webrtc.js"), "utf8");
+        mainPagePatch = fs.readFileSync(path.join(CITOFONO_DIR, "patch-mainpage-qml.js"), "utf8");
+        ptraceInject = fs.readFileSync(path.join(CITOFONO_DIR, "ptrace-inject-armhf")); // binario: niente "utf8", Buffer grezzo
     } catch (e) { return res.status(500).json({ ok: false, error: "file QML/patch non trovati: " + e.message }); }
 
     const log = [];
@@ -746,6 +750,8 @@ app.post("/api/citofono/install", async (req, res) => {
         log.push("SchedaPage.qml caricato");
         await sshExec(conn, "cat > /home/bticino/cfg/extra/patch-scheda-qml.js", patch);
         log.push("patch-scheda-qml.js caricato");
+        await sshExec(conn, "mkdir -p /home/bticino/cfg/extra/fb-vnc && cat > /home/bticino/cfg/extra/fb-vnc/fb-vnc.js", vncScript);
+        log.push("fb-vnc.js caricato (visualizzazione live)");
 
         const script = [
             "mount -oremount,rw /",
@@ -760,6 +766,46 @@ app.post("/api/citofono/install", async (req, res) => {
         if (r.errout) log.push("stderr: " + r.errout.trim());
         if (r.out.indexOf("DONE_SCHEDE") < 0 && r.out.indexOf("gia' patchato") < 0)
             throw new Error("la patch non ha confermato il completamento (controlla il percorso node e i permessi)");
+
+        await sshExec(conn, "cat > /home/bticino/cfg/extra/patch-mainpage-qml.js", mainPagePatch);
+        const mpScript = [
+            "mount -oremount,rw /",
+            "[ -f /home/bticino/cfg/extra/MainPage.qml.bak.premainpage ] || cp /home/bticino/bin/gui/skins/default/MainPage.qml /home/bticino/cfg/extra/MainPage.qml.bak.premainpage",
+            nodePath + " /home/bticino/cfg/extra/patch-mainpage-qml.js /home/bticino/bin/gui/skins/default/MainPage.qml",
+            "mount -oremount,ro /",
+            "echo DONE_MAINPAGE"
+        ].join(" && ");
+        const rmp = await sshExec(conn, mpScript);
+        if (rmp.out) log.push(rmp.out.trim());
+        if (rmp.errout) log.push("stderr: " + rmp.errout.trim());
+        if (rmp.out.indexOf("DONE_MAINPAGE") < 0 && rmp.out.indexOf("gia' patchato") < 0)
+            log.push("ATTENZIONE: patch di MainPage.qml (rotella su menu nativo) non confermata, il resto e' comunque andato a buon fine.");
+
+        log.push("Installazione del controller c300x personalizzato (supporto avvio/stop VNC)…");
+        await sshExec(conn, "cat > /home/bticino/cfg/extra/controller-bundle-webrtc.js", controllerBundle);
+        const cscript = [
+            "mount -oremount,rw /",
+            "[ -f /home/bticino/cfg/extra/c300x-controller/bundle.js.bak-preaddon ] || cp /home/bticino/cfg/extra/c300x-controller/bundle.js /home/bticino/cfg/extra/c300x-controller/bundle.js.bak-preaddon",
+            "cp /home/bticino/cfg/extra/controller-bundle-webrtc.js /home/bticino/cfg/extra/c300x-controller/bundle.js",
+            "mount -oremount,ro /",
+            "/etc/init.d/c300x-controller restart",
+            "echo DONE_CONTROLLER"
+        ].join(" && ");
+        const rc = await sshExec(conn, cscript);
+        if (rc.out) log.push(rc.out.trim());
+        if (rc.errout) log.push("stderr: " + rc.errout.trim());
+        if (rc.out.indexOf("DONE_CONTROLLER") < 0)
+            log.push("ATTENZIONE: il controller potrebbe non essere ripartito correttamente, verifica su :8080");
+        else
+            log.push("Controller aggiornato e riavviato (backup in bundle.js.bak-preaddon).");
+
+        log.push("Caricamento dell'iniettore ptrace (per il pannello pulsanti nella vista live)…");
+        await sshExec(conn, "cat > /home/bticino/cfg/extra/ptrace-inject-armhf", ptraceInject);
+        const rpi = await sshExec(conn, "chmod +x /home/bticino/cfg/extra/ptrace-inject-armhf && echo DONE_PTRACE");
+        if (rpi.out) log.push(rpi.out.trim());
+        if (rpi.errout) log.push("stderr: " + rpi.errout.trim());
+        if (rpi.out.indexOf("DONE_PTRACE") < 0)
+            log.push("ATTENZIONE: l'iniettore ptrace potrebbe non essere stato installato correttamente.");
 
         if (reboot) {
             // Il comando DEVE sopravvivere alla chiusura della sessione SSH: senza
@@ -782,7 +828,204 @@ app.post("/api/citofono/install", async (req, res) => {
 
 app.get("/health", (req, res) => res.json({ ok: true, version: VERSION }));
 
-app.listen(PORT, () => {
+// ===== Visualizzazione live (VNC) nell'editor =====
+// L'add-on fa da semplice tubo WebSocket <-> TCP verso fb-vnc.js sul citofono
+// (avviato/fermato tramite l'endpoint /fb-vnc del c300x-controller). Il
+// protocollo RFB vero e proprio (handshake, flow control, decoding) e'
+// gestito da noVNC nel browser - un client maturo e collaudato. La nostra
+// precedente implementazione artigianale (client RFB scritto a mano dentro
+// l'add-on, conversione in PNG, polling a intervallo fisso) si e' rivelata
+// troppo aggressiva per l'hardware debole del citofono: richiedeva un nuovo
+// frame ogni Xms a prescindere da quanto tempo impiegasse il citofono a
+// rispondere, invece di aspettare la risposta precedente come fa un vero
+// client VNC — causava lag crescente e, sotto carico, crash del processo
+// sul citofono. Con noVNC quel problema sparisce perche' il flow control e'
+// gestito correttamente.
+const { WebSocketServer } = require("ws");
+const net = require("net");
+
+const VNC_PORT = 5900;
+const CONTROLLER_PORT = 8080;
+
+async function controllerFetch(host, endpoint, params) {
+    const qs = new URLSearchParams({ ...(params || {}), raw: "true" }).toString();
+    const url = `http://${host}:${CONTROLLER_PORT}/${endpoint}?${qs}`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`controller (${endpoint}) risposto ${r.status}`);
+    return r.json().catch(() => ({}));
+}
+
+app.post("/api/live/start", async (req, res) => {
+    const c = await readCfg();
+    const host = (c.host || "").trim();
+    if (!host) return res.status(400).json({ ok: false, error: "host del citofono non configurato (vedi impostazioni SSH)" });
+    try {
+        await controllerFetch(host, "fb-vnc", { start: "true" });
+    } catch (e) {
+        return res.status(502).json({ ok: false, error: "impossibile avviare il VNC sul citofono: " + e.message });
+    }
+    // L'iniettore di input e' un bonus (i pulsanti nella live view): se non
+    // riesce a partire, il video continua comunque a funzionare.
+    try {
+        await controllerFetch(host, "ptrace-inject", { start: "true" });
+    } catch (e) {
+        console.warn("[c100x-dashboard] avvio ptrace-inject fallito (i pulsanti nella live view non funzioneranno):", e.message);
+    }
+    res.json({ ok: true });
+});
+
+app.post("/api/live/stop", async (req, res) => {
+    const c = await readCfg();
+    const host = (c.host || "").trim();
+    if (host) {
+        try { await controllerFetch(host, "fb-vnc", { stop: "true" }); } catch (e) { /* non bloccante */ }
+        try { await controllerFetch(host, "ptrace-inject", { stop: "true" }); } catch (e) { /* non bloccante */ }
+    }
+    res.json({ ok: true });
+});
+
+// Proxy WebSocket <-> TCP grezzo verso citofono:5900. Non tocchiamo il
+// protocollo RFB per niente: passano solo byte, in entrambe le direzioni.
+const liveWss = new WebSocketServer({ noServer: true });
+const liveSockets = new Set();
+let liveStopTimer = null;
+
+liveWss.on("connection", async (ws) => {
+    const c = await readCfg();
+    const host = (c.host || "").trim();
+    if (!host) { ws.close(1011, "host non configurato"); return; }
+
+    if (liveStopTimer) { clearTimeout(liveStopTimer); liveStopTimer = null; }
+
+    const tcp = net.connect(VNC_PORT, host);
+    tcp.setNoDelay(true);
+    liveSockets.add(ws);
+
+    tcp.on("data", (chunk) => { if (ws.readyState === ws.OPEN) ws.send(chunk); });
+    tcp.on("error", (e) => {
+        console.warn("[c100x-dashboard] live: errore TCP verso citofono:", e.message);
+        try { ws.close(1011, e.message); } catch (_) { /* noop */ }
+    });
+    tcp.on("close", () => { try { ws.close(); } catch (_) { /* noop */ } });
+
+    ws.on("message", (data) => { if (!tcp.destroyed) tcp.write(data); });
+    ws.on("close", () => {
+        liveSockets.delete(ws);
+        try { tcp.destroy(); } catch (_) { /* noop */ }
+        // Se non resta nessun client collegato, fermiamo il VNC sul citofono
+        // dopo una breve grazia (evita di fermarlo per un reload rapido).
+        if (liveSockets.size === 0) {
+            if (liveStopTimer) clearTimeout(liveStopTimer);
+            liveStopTimer = setTimeout(() => {
+                liveStopTimer = null;
+                readCfg().then((cc) => {
+                    if (!cc.host) return;
+                    const h = cc.host.trim();
+                    controllerFetch(h, "fb-vnc", { stop: "true" }).catch(() => {});
+                    controllerFetch(h, "ptrace-inject", { stop: "true" }).catch(() => {});
+                });
+            }, 5000);
+        }
+    });
+    ws.on("error", (e) => { console.warn("[c100x-dashboard] live: errore WebSocket:", e.message); });
+});
+
+// ===== Simulazione pulsanti reali durante la visualizzazione live =====
+// Chiamata diretta al controller (endpoint /ptrace-inject), che inietta la
+// pressione a livello di sistema (syscall) sul citofono — indistinguibile
+// da una pressione fisica vera per il firmware, funziona ovunque (menu
+// nativo incluso), non solo dentro le nostre schede.
+const BUTTON_KEY_MAP = {
+    "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7",
+    "up": "up", "down": "down", "ok": "ok",
+    "call": "connect", "hangup": "close"
+};
+
+app.post("/api/live/button", async (req, res) => {
+    const b = req.body || {};
+    const button = String(b.button || "").trim();
+    const phase = b.phase === "release" ? "release" : "press";
+    const key = BUTTON_KEY_MAP[button];
+    if (!key) return res.status(400).json({ ok: false, error: "pulsante non valido" });
+
+    const c = await readCfg();
+    const host = (c.host || "").trim();
+    if (!host) return res.status(400).json({ ok: false, error: "host del citofono non configurato" });
+
+    try {
+        const r = await controllerFetch(host, "ptrace-inject", { key, phase });
+        res.json({ ok: true, message: r.message });
+    } catch (e) {
+        res.status(502).json({ ok: false, error: "invio al citofono fallito: " + e.message });
+    }
+});
+
+// ===== Stato retroilluminazione display (per l'entita' light in HA) =====
+// Il QML riporta lo stato reale (global.screenState) ogni ~300ms; l'integrazione
+// HA legge qui per il suo coordinator, e accoda comandi accendi/spegni che il
+// QML consuma allo stesso ritmo.
+let backlightOn = null; // null = non ancora riportato
+let backlightQueue = [];
+
+app.post("/api/backlight-state", (req, res) => {
+    const b = req.body || {};
+    backlightOn = !!b.on;
+    res.json({ ok: true });
+});
+
+app.get("/api/backlight-state", (req, res) => {
+    res.json({ on: backlightOn });
+});
+
+app.post("/api/backlight-command", (req, res) => {
+    const b = req.body || {};
+    backlightQueue.push({ on: !!b.on });
+    res.json({ ok: true });
+});
+
+app.get("/api/backlight-pending", (req, res) => {
+    const pending = backlightQueue;
+    backlightQueue = [];
+    res.json({ commands: pending });
+});
+
+// Diagnostica: testa la sola connettivita' TCP verso citofono:5900, senza
+// nessuna logica RFB, per isolare "il container riesce ad aprire il socket?"
+// da "il protocollo RFB funziona?".
+app.get("/api/live/debug-connect", async (req, res) => {
+    const c = await readCfg();
+    const host = (c.host || "").trim();
+    if (!host) return res.status(400).json({ ok: false, error: "host non configurato" });
+    const result = await new Promise((resolve) => {
+        const start = Date.now();
+        const socket = net.connect({ host, port: VNC_PORT, timeout: 5000 });
+        socket.on("connect", () => {
+            resolve({ ok: true, ms: Date.now() - start });
+            socket.destroy();
+        });
+        socket.on("timeout", () => {
+            resolve({ ok: false, error: "timeout", ms: Date.now() - start });
+            socket.destroy();
+        });
+        socket.on("error", (e) => {
+            resolve({ ok: false, error: e.message, code: e.code, ms: Date.now() - start });
+        });
+    });
+    res.json({ host, port: VNC_PORT, ...result });
+});
+
+const httpServer = app.listen(PORT, () => {
     console.log(`[c100x-dashboard] v${VERSION} in ascolto sulla porta ${PORT}`);
     console.log(`[c100x-dashboard] SUPERVISOR_TOKEN ${SUPERVISOR_TOKEN ? "presente" : "ASSENTE"}`);
+});
+
+httpServer.on("upgrade", (request, socket, head) => {
+    const pathname = new URL(request.url, "http://localhost").pathname;
+    if (pathname === "/api/live/ws" || pathname.endsWith("/api/live/ws")) {
+        liveWss.handleUpgrade(request, socket, head, (ws) => {
+            liveWss.emit("connection", ws, request);
+        });
+    } else {
+        socket.destroy();
+    }
 });

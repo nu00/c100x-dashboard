@@ -5,12 +5,13 @@ videocitofono BTicino Classe 100X. Componi le schermate trascinando elementi su 
 800×480, le salvi, e il citofono interroga questo add-on (in HTTP, sulla LAN) per ricevere
 il layout attivo con i **valori dei sensori aggiornati dal vivo**.
 
-> Stato attuale: **v0.9.4** — editor IT/EN (multi-selezione, allinea/distribuisci, copia/incolla, galleria schermate), lato citofono, installazione SSH, show/hide via API.
-> Vedi il README della repo per integrazione HA e installazione completa. (rotazione con maniglia, guide di allineamento, linee/frecce,
-> icone, upload e scelta immagini, interfaccia integrata in HA via Ingress). È incluso anche il
-> lato citofono (`citofono/SchedaPage.qml`) che disegna le schede; l'installazione su citofono
-> può essere fatta in automatico dal pulsante **Citofono** (SSH), oppure manualmente
-> (vedi `citofono/README.md`). Prossimo passo: traduzione inglese.
+> Stato attuale: **v0.12.0** — editor IT/EN completo (multi-selezione, allinea/distribuisci,
+> copia/incolla, galleria schermate, template Jinja2, pulsanti configurabili incl. rotella),
+> installazione SSH completa (lato citofono + patch menu nativo + controller), **visualizzazione
+> live interattiva** (noVNC + iniezione pulsanti a livello di sistema), entità Home Assistant per
+> stato/occupato/retroilluminazione, show/hide via API.
+> Vedi il [README della repo](../README.md) ([EN](../README.md) / [IT](../README.it.md)) per la
+> documentazione completa (integrazione HA, installazione, note sui rischi della vista live).
 
 ## Architettura
 

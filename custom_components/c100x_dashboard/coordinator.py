@@ -72,3 +72,30 @@ class C100xActiveSchedaCoordinator(DataUpdateCoordinator[dict]):
                 return await resp.json()
         except Exception as err:  # noqa: BLE001
             raise UpdateFailed(f"scheda-state fetch failed: {err}") from err
+
+
+class C100xBacklightCoordinator(DataUpdateCoordinator[dict]):
+    """Fetch /api/backlight-state from the add-on: se il display e' acceso o
+    spento in questo momento (riportato dal QML ogni ~300ms). Stessa cache
+    in memoria dell'add-on, nessun impatto sul citofono.
+    """
+
+    def __init__(self, hass: HomeAssistant, base_url: str) -> None:
+        super().__init__(
+            hass,
+            _LOGGER,
+            name="c100x_dashboard_retroilluminazione",
+            update_interval=timedelta(seconds=FAST_SCAN_INTERVAL_SECONDS),
+        )
+        self._base = base_url.rstrip("/")
+        self._session = async_get_clientsession(hass)
+
+    async def _async_update_data(self) -> dict:
+        try:
+            async with self._session.get(
+                f"{self._base}/api/backlight-state", timeout=10
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json()
+        except Exception as err:  # noqa: BLE001
+            raise UpdateFailed(f"backlight-state fetch failed: {err}") from err

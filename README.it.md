@@ -106,10 +106,47 @@ di backup e **importarle**, per non perdere il lavoro se reinstalli l'add-on.
 
 Premi **Citofono** nell'editor, inserisci host/utente/password SSH del citofono e l'**URL
 dell'add-on come lo vede il citofono** (es. `http://192.168.1.10:8099`), poi
-**Installa / aggiorna**. L'add-on carica `SchedaPage.qml`, applica la patch a `main.qml`
-(con backup) e riavvia. Una spunta decide se salvare la password SSH nell'add-on o chiederla ogni volta.
+**Installa / aggiorna**. Questo carica `SchedaPage.qml`, applica la patch a `main.qml` (con
+backup), applica la patch a `MainPage.qml` — il menu nativo di default — per abilitare la
+navigazione con la rotella anche lì (una singola `property` aggiunta, backup automatico),
+carica il componente per la visualizzazione live e lo strumento di iniezione pulsanti
+`ptrace-inject` (vedi sotto), **sostituisce il bundle di
+[c300x-controller](https://github.com/slyoldfox/c300x-controller)** sul citofono con una
+versione che aggiunge il supporto avvio/stop per entrambi (backup automatico dell'originale,
+e la sua pagina `:8080` ha ricevuto anche una rinfrescata estetica ed è ora interamente in
+inglese), e riavvia. Una spunta decide se salvare la password SSH nell'add-on o chiederla
+ogni volta.
 
 Preferisci l'installazione manuale? Vedi `c100x_dashboard/citofono/README.md`.
+
+## Visualizzazione live e controllo da remoto
+
+Premi **Live** nell'editor per un mirroring reale e interattivo dello schermo del citofono:
+l'add-on fa da tubo WebSocket verso un piccolo server VNC sul citofono, e
+[noVNC](https://github.com/novnc/noVNC) (libreria matura, inclusa nel progetto) gestisce il
+protocollo vero e proprio nel browser — questo ha sostituito un primo approccio più semplice
+(l'add-on che ricaricava un'immagine statica a intervalli), rivelatosi troppo pesante per la
+CPU debole del citofono e capace di bloccarne il server VNC sotto carico.
+
+Mentre è aperta hai anche un pannello pulsanti (1-7, rotella su/giù/OK, rispondi/riaggancia/muto)
+che **preme davvero i pulsanti del citofono a livello di sistema**: un piccolo strumento
+(`ptrace-inject`) si aggancia al processo grafico del citofono e inietta la pressione
+direttamente nelle sue chiamate di sistema — indistinguibile da una pressione fisica vera per
+il firmware. A differenza di un approccio basato sul richiamare funzioni QML, questo funziona
+**ovunque**: dentro le schede create con questo add-on, e anche nel menu nativo di default del
+citofono.
+
+Richiede il bundle personalizzato del controller citato sopra (è quello che avvia/ferma sia il
+server VNC sia l'iniettore sul citofono), quindi entrambi fanno ora parte dell'installazione SSH
+standard, non sono più opzionali.
+
+> **Una nota sui rischi.** L'iniezione a livello di sistema tramite `ptrace` è per natura più
+> invasiva di una semplice chiamata a una funzione QML — durante lo sviluppo ha causato un
+> riavvio del citofono (mai più riprodotto da allora, dopo una correzione: ora consegna un solo
+> evento tastiera alla volta, come si comporta davvero il driver del device). Per questo motivo
+> l'iniettore viene avviato solo mentre la vista Live è aperta, e fermato pochi secondi dopo che
+> la chiudi o perdi la connessione — **non** è pensato per girare come servizio permanente in
+> background.
 
 ## Installare l'integrazione (opzionale)
 
@@ -124,10 +161,13 @@ può scrivere nella cartella `custom_components/` di HA. Ti serve solo se vuoi i
 3. Impostazioni → Dispositivi e servizi → **Aggiungi integrazione → C100X Dashboard** e indica
    l'URL dell'add-on (es. `http://192.168.1.10:8099`).
 
+Per lo storico delle versioni dell'integrazione (indipendente da quello dell'add-on), vedi
+[`custom_components/c100x_dashboard/CHANGELOG.md`](custom_components/c100x_dashboard/CHANGELOG.md).
+
 ## Entità esposte dall'integrazione
 
-Oltre ai servizi `show`/`hide`/`set_active`, l'integrazione crea alcune entità di sola lettura
-sotto lo stesso dispositivo:
+Oltre ai servizi `show`/`hide`/`set_active`, l'integrazione crea alcune entità sotto lo stesso
+dispositivo:
 
 - **Intercom renderer** (`update.*`) — indica se la patch QML sul citofono corrisponde a quella
   distribuita da questa versione dell'add-on.
@@ -141,6 +181,9 @@ sotto lo stesso dispositivo:
   Richiede MQTT — vedi sotto.
 - **Ponte MQTT citofono online** (`binary_sensor.*`) — se il ponte MQTT descritto sotto è
   raggiungibile.
+- **Retroilluminazione display** (`light.*`) — la retroilluminazione del display del citofono.
+  Riflette lo stato reale (letto ogni ~2s) e può essere accesa/spenta direttamente da Home
+  Assistant.
 
 ### Rilevamento occupato via MQTT (opzionale)
 
@@ -214,6 +257,9 @@ rest_command:
   potrebbe non essere reso in modo perfetto.
 - La password SSH, se salvata, è memorizzata in chiaro in `/data` dell'add-on e non viene mai
   restituita al browser.
+- La visualizzazione live consuma CPU reale sul citofono (server VNC + iniettore pulsanti): va
+  bene per uso occasionale, non è pensata per restare accesa in continuazione — vedi la nota sui
+  rischi qui sopra riguardo `ptrace`.
 
 ## Crediti
 
@@ -223,6 +269,7 @@ Questo progetto si appoggia al lavoro di reverse engineering fatto prima dalla c
 - [slyoldfox/c300x-dashboard](https://github.com/slyoldfox/c300x-dashboard) — l'ispirazione: una dashboard QML alimentata dal controller, pensata per il C300X (Qt 4.8.7 / QtQuick 1.x). Dato che dichiara *"Bticino c100x devices are untested"* e usa una generazione Qt/QtQuick diversa, il renderer di questo progetto è stato riscritto da zero per il C100X (Qt5 / QtQuick 2.x).
 - [fquinto/bticinoClasse300x](https://github.com/fquinto/bticinoClasse300x) — il firmware modificato che rende possibile l'accesso root/SSH.
 - [Roboto](https://fonts.google.com/specimen/Roboto) (Apache License 2.0) — il font imbarcato, condiviso tra editor e renderer del citofono.
+- [novnc/noVNC](https://github.com/novnc/noVNC) — la libreria client VNC (inclusa nel progetto) che alimenta la visualizzazione live nel browser.
 
 ## Licenza
 

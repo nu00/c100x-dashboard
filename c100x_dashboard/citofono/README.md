@@ -49,7 +49,48 @@ Prerequisito: l'add-on "C100X Dashboard" installato e funzionante, e l'IP di Hom
 
    Il blocco ha marcatori `BEGIN/END C100X-HA-SCHEDE` e **coesiste** con quello degli avvisi.
 
-3. **Riavvia** per ricaricare la GUI:
+3. **Patcha `MainPage.qml`** (il menu nativo di default): aggiunge una singola `property` che
+   espone `returnPressed()` — abilita la navigazione su/giù/OK della rotella anche lì, non solo
+   dentro le nostre schede.
+
+   ```sh
+   mount -oremount,rw /
+   cp /home/bticino/bin/gui/skins/default/MainPage.qml /home/bticino/cfg/extra/MainPage.qml.bak.premainpage
+   /home/bticino/cfg/extra/node/bin/node patch-mainpage-qml.js \
+       /home/bticino/bin/gui/skins/default/MainPage.qml
+   mount -oremount,ro /
+   ```
+
+4. **Copia `fb-vnc.js`** (visualizzazione live via VNC):
+
+   ```sh
+   mkdir -p /home/bticino/cfg/extra/fb-vnc
+   cp fb-vnc.js /home/bticino/cfg/extra/fb-vnc/fb-vnc.js
+   ```
+
+5. **Copia lo strumento di iniezione pulsanti** `ptrace-inject-armhf` (usato dalla vista Live
+   per premere davvero i pulsanti a livello di sistema — vedi la nota sui rischi nel README
+   principale prima di installarlo):
+
+   ```sh
+   cp ptrace-inject-armhf /home/bticino/cfg/extra/ptrace-inject-armhf
+   chmod +x /home/bticino/cfg/extra/ptrace-inject-armhf
+   ```
+
+6. **Sostituisci il bundle di `c300x-controller`** (serve perché l'add-on possa avviare/fermare
+   la visualizzazione live e l'iniettore da remoto — senza questo passaggio "Live" nell'editor
+   non funziona):
+
+   ```sh
+   mount -oremount,rw /
+   [ -f /home/bticino/cfg/extra/c300x-controller/bundle.js.bak-preaddon ] || \
+       cp /home/bticino/cfg/extra/c300x-controller/bundle.js /home/bticino/cfg/extra/c300x-controller/bundle.js.bak-preaddon
+   cp controller-bundle-webrtc.js /home/bticino/cfg/extra/c300x-controller/bundle.js
+   mount -oremount,ro /
+   /etc/init.d/c300x-controller restart
+   ```
+
+7. **Riavvia** per ricaricare la GUI:
 
    ```sh
    reboot
@@ -75,6 +116,7 @@ utile per consumo istantaneo, percentuale UPS durante un blackout, ecc.
 ```sh
 mount -oremount,rw /
 /home/bticino/cfg/extra/node/bin/node unpatch-scheda-qml.js /home/bticino/bin/gui/skins/default/main.qml
+/home/bticino/cfg/extra/node/bin/node unpatch-mainpage-qml.js /home/bticino/bin/gui/skins/default/MainPage.qml
 rm -f /home/bticino/bin/gui/skins/default/SchedaPage.qml
 mount -oremount,ro /
 reboot
