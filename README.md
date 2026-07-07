@@ -120,6 +120,47 @@ add-on over REST (see below).
 3. Settings → Devices & Services → **Add integration → C100X Dashboard**, and enter the add-on URL
    (e.g. `http://192.168.1.10:8099`).
 
+## Entities exposed by the integration
+
+Besides the `show`/`hide`/`set_active` services, the integration creates a few read-only
+entities under the same device:
+
+- **Intercom renderer** (`update.*`) — tracks whether the QML patch on the intercom matches the
+  one shipped by this add-on version.
+- **Pagina attiva** (`sensor.*`) — which screen is actually showing on the physical display right
+  now (`idle` when the screen is free: home, closed via the side wheel, or interrupted by a real
+  call). Polled every 2s against a value the add-on already keeps in memory — pushed live by the
+  patched QML — so this has no extra impact on the intercom itself.
+- **Citofono occupato** (`binary_sensor.*`) — on while the intercom's camera is in use, for *any*
+  reason: a real doorbell press, the WebRTC bundle, the BTicino app locally, or the BTicino app
+  over LTE. Detected at the OpenWebNet bus level, not the network level, so it covers all of the
+  above with a single mechanism. Requires MQTT — see below.
+- **Ponte MQTT citofono online** (`binary_sensor.*`) — whether the MQTT bridge below is reachable.
+
+### MQTT-based occupancy detection (optional)
+
+"Citofono occupato" needs two things you set up yourself, both optional:
+
+1. Home Assistant's own **MQTT integration**, configured against the same broker the intercom
+   can reach.
+2. **[TcpDump2Mqtt](https://github.com/fquinto/bticinoClasse300x)** installed and running on the
+   intercom (`/etc/tcpdump2mqtt`), publishing raw OpenWebNet traffic to `Bticino/tx` and its own
+   online/offline status to `Bticino/LastWillT`.
+
+If either piece is missing, both entities degrade gracefully instead of breaking the
+integration:
+- No MQTT integration configured in HA → both entities stay `unavailable`, with a one-time
+  warning in the HA log.
+- MQTT configured but the bridge never publishes → `citofono_occupato` defaults to `off`
+  (assumes free) and `ponte_mqtt_citofono_online` stays `unknown` until the bridge's retained
+  Last Will message arrives.
+
+Known gotcha on the intercom side: `TcpDump2Mqtt`'s own startup script checks for a default
+gateway only *once*; on a slow Wi-Fi reconnect after a reboot it can give up before `wlan0` gets
+an IP, and nothing restarts it afterwards. If `binary_sensor.ponte_mqtt_citofono_online` stays
+off after a reboot, SSH in and run `/etc/tcpdump2mqtt/TcpDump2Mqtt.sh` again — or patch the
+gateway check into a retry loop (see `c100x_dashboard/citofono/README.md`).
+
 ## Trigger screens from Home Assistant
 
 **With the integration.** Once installed (see above), you get these actions:
@@ -167,6 +208,7 @@ rest_command:
 | POST | `/api/active` | set the active layout |
 | POST | `/api/show` | show now (`{name?, duration?}`) |
 | POST | `/api/hide` | hide |
+| GET/POST | `/api/scheda-state` | what's actually on screen right now (`{name}` or `{state:"idle"}`), reported live by the patched QML |
 | GET | `/api/entities` · `/api/icons` · `/api/entity-icons` | autocomplete sources |
 | GET | `/icon/:name` · `/image/:name` · `/ha-image/:name` | icons / images for editor + intercom |
 | POST | `/api/citofono/install` | upload + patch + reboot via SSH |

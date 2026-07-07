@@ -3,8 +3,11 @@
 Questa cartella contiene il pezzo che gira **sul citofono** (BTicino Classe 100X) e che
 disegna sul display le schede composte nell'editor dell'add-on.
 
-> Per ora l'installazione è **manuale** (come per la funzione "avvisi"). L'auto-provisioning
-> via SSH dall'add-on è il passo successivo.
+> **Installazione automatica disponibile.** Dall'editor dell'add-on, pannello **Citofono**:
+> inserisci host/utente/password SSH e l'URL dell'add-on, poi **Installa/aggiorna** — carica
+> `SchedaPage.qml`, patcha `main.qml` e riavvia da solo. La procedura qui sotto è la via
+> **manuale/alternativa** (utile se non vuoi salvare la password SSH nell'add-on, o per capire
+> cosa fa davvero l'installazione automatica).
 
 ## Come funziona
 
@@ -19,7 +22,7 @@ Un `Timer` iniettato in `main.qml` interroga `http://<add-on>:8099/active` ogni 
 `SchedaPage.qml` disegna tutti i tipi dell'editor: testo, valore sensore, immagine, icona,
 rettangolo, cerchio, triangolo, linea, freccia, con rotazione.
 
-## Installazione manuale
+## Installazione manuale (alternativa)
 
 Prerequisito: l'add-on "C100X Dashboard" installato e funzionante, e l'IP di Home Assistant
 (dove gira l'add-on, porta 8099). Serve accesso SSH al citofono.
@@ -86,3 +89,25 @@ reboot
 - Il rendering di triangoli e frecce usa `Canvas`, e le icone/immagini usano `Image` (SVG
   incluso): se sul tuo firmware qualcosa non si disegna, segnalalo — potrebbe servire un
   ritocco (è la parte meno collaudata).
+- Se usi anche **TcpDump2Mqtt** (per `binary_sensor.citofono_occupato`, vedi il README
+  principale): lo script `/etc/tcpdump2mqtt/TcpDump2Mqtt` controlla il gateway di default una
+  sola volta all'avvio (`route -n | grep 'UG[ \t]' | awk '{print $2}'`) e si chiude subito se
+  non lo trova — capita spesso su un boot con Wi-Fi lento a riconnettersi, e nessun watchdog lo
+  rilancia più da solo. Fix consigliato: sostituisci quel controllo con un ciclo di retry, es.
+
+  ```sh
+  WAITED=0
+  GWADDR="$(route -n | grep 'UG[ \t]' | awk '{print $2}')"
+  while [ -z "$GWADDR" ] && [ $WAITED -lt 60 ]; do
+          sleep 1
+          WAITED=$((WAITED+1))
+          GWADDR="$(route -n | grep 'UG[ \t]' | awk '{print $2}')"
+  done
+  if [ -z "$GWADDR" ]; then
+          echo "ERROR: Default gateway not found after ${WAITED}s, giving up."
+          exit 1
+  fi
+  ```
+
+  Se il bridge risulta ancora offline dopo un riavvio, rilancialo a mano con
+  `/etc/tcpdump2mqtt/TcpDump2Mqtt.sh`.

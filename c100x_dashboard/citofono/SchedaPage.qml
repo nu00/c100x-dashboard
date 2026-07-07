@@ -194,9 +194,6 @@ FocusScope {
         onTriggered: root.back()
     }
 
-    // Rete di sicurezza anti-blocco: la scheda si chiude SEMPRE dopo 5 minuti,
-    // anche se autoCloseSeconds = 0. Cosi' non puo' mai restare incastrata.
-
     // ---- Pulsanti configurabili per-scheda ----
     // schedaData.buttons = { "1".."7"|"up"|"down"|"ok": { action:{...}, toast:{text,seconds}, closes:bool } }
     // Un tasto senza voce qui mantiene il comportamento nativo/di default.

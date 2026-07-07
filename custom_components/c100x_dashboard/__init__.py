@@ -1,6 +1,8 @@
 """C100X Dashboard — services + intercom-renderer update entity, via the add-on."""
 from __future__ import annotations
 
+import logging
+
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -9,9 +11,11 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
-from .coordinator import C100xStatusCoordinator
+from .coordinator import C100xActiveSchedaCoordinator, C100xStatusCoordinator
 
-PLATFORMS = [Platform.UPDATE]
+_LOGGER = logging.getLogger(__name__)
+
+PLATFORMS = [Platform.UPDATE, Platform.SENSOR, Platform.BINARY_SENSOR]
 
 SHOW_SCHEMA = vol.Schema({
     vol.Optional("name"): cv.string,
@@ -27,9 +31,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = C100xStatusCoordinator(hass, base)
     await coordinator.async_config_entry_first_refresh()
 
+    active_scheda_coordinator = C100xActiveSchedaCoordinator(hass, base)
+    try:
+        await active_scheda_coordinator.async_config_entry_first_refresh()
+    except Exception as err:  # noqa: BLE001
+        # Non blocchiamo il setup dell'intera integrazione per questo: è un
+        # sensore accessorio, riproverà da solo secondo il suo scan interval.
+        _LOGGER.warning("Primo fetch di /api/scheda-state fallito: %s", err)
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "url": base,
         "coordinator": coordinator,
+        "active_scheda_coordinator": active_scheda_coordinator,
     }
 
     session = async_get_clientsession(hass)

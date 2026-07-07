@@ -124,6 +124,49 @@ può scrivere nella cartella `custom_components/` di HA. Ti serve solo se vuoi i
 3. Impostazioni → Dispositivi e servizi → **Aggiungi integrazione → C100X Dashboard** e indica
    l'URL dell'add-on (es. `http://192.168.1.10:8099`).
 
+## Entità esposte dall'integrazione
+
+Oltre ai servizi `show`/`hide`/`set_active`, l'integrazione crea alcune entità di sola lettura
+sotto lo stesso dispositivo:
+
+- **Intercom renderer** (`update.*`) — indica se la patch QML sul citofono corrisponde a quella
+  distribuita da questa versione dell'add-on.
+- **Pagina attiva** (`sensor.*`) — quale scheda è davvero mostrata sul display fisico in questo
+  momento (`idle` quando lo schermo è libero: home, chiuso con la rotella laterale, o interrotto
+  da una chiamata reale). Interrogato ogni 2s su un valore che l'add-on tiene già in memoria —
+  aggiornato in tempo reale dalla patch QML — quindi nessun impatto aggiuntivo sul citofono.
+- **Citofono occupato** (`binary_sensor.*`) — attivo mentre la telecamera del citofono è in uso,
+  per qualsiasi motivo: squillo reale, bundle WebRTC, app BTicino in locale o via LTE. Rilevato a
+  livello di bus OpenWebNet, non di rete, quindi copre tutti i casi con lo stesso meccanismo.
+  Richiede MQTT — vedi sotto.
+- **Ponte MQTT citofono online** (`binary_sensor.*`) — se il ponte MQTT descritto sotto è
+  raggiungibile.
+
+### Rilevamento occupato via MQTT (opzionale)
+
+"Citofono occupato" richiede due componenti da configurare a parte, entrambi opzionali:
+
+1. L'**integrazione MQTT** di Home Assistant, configurata sullo stesso broker che il citofono
+   può raggiungere.
+2. **[TcpDump2Mqtt](https://github.com/fquinto/bticinoClasse300x)** installato e avviato sul
+   citofono (`/etc/tcpdump2mqtt`), che pubblica il traffico OpenWebNet grezzo sul topic
+   `Bticino/tx` e il proprio stato online/offline su `Bticino/LastWillT`.
+
+Se manca uno dei due pezzi, entrambe le entità degradano in modo esplicito invece di rompere
+l'integrazione:
+- Nessuna integrazione MQTT configurata in HA → entrambe le entità restano `unavailable`, con un
+  warning una tantum nei log di HA.
+- MQTT configurato ma il ponte non pubblica mai nulla → `citofono_occupato` parte da `off`
+  (assume libero) e `ponte_mqtt_citofono_online` resta `unknown` finché non arriva il messaggio
+  Last Will (retained) del ponte.
+
+Attenzione nota lato citofono: lo script di avvio di `TcpDump2Mqtt` controlla la presenza del
+gateway di default una sola volta; con un Wi-Fi lento a riconnettersi dopo un riavvio può
+arrendersi prima che `wlan0` abbia un IP, e nessuno lo rilancia più da solo. Se
+`binary_sensor.ponte_mqtt_citofono_online` resta off dopo un riavvio, collegati via SSH e rilancia
+`/etc/tcpdump2mqtt/TcpDump2Mqtt.sh` a mano — oppure trasforma il controllo del gateway in un ciclo
+di retry (vedi `c100x_dashboard/citofono/README.md`).
+
 ## Richiamare le schede da Home Assistant
 
 **Con l'integrazione.** Una volta installata (vedi sopra), ottieni queste azioni:

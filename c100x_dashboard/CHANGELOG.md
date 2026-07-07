@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0
+
+- **Nuove entità per capire cosa sta facendo davvero il citofono**: `sensor.pagina_attiva` (quale scheda è mostrata sul display in questo momento, `idle` se libero — copre anche la chiusura manuale con la rotella laterale e l'interruzione da chiamata reale) e `binary_sensor.citofono_occupato` (on quando la telecamera è in uso, per qualsiasi motivo: squillo reale, WebRTC, app locale o via LTE — rilevato a livello di bus OpenWebNet, non di rete, quindi copre tutti i casi con lo stesso meccanismo).
+- **Rilevamento occupato via MQTT (opzionale)**: `citofono_occupato` legge il topic `Bticino/tx` pubblicato dal bridge [TcpDump2Mqtt](https://github.com/fquinto/bticinoClasse300x), se installato sul citofono. Aggiunta anche `binary_sensor.ponte_mqtt_citofono_online` per sapere se quel bridge è raggiungibile. Se MQTT non è configurato in HA, o il bridge non è installato/avviato, le due entità degradano in modo esplicito (`unavailable`/default sicuro) invece di rompere l'integrazione.
+- **Fix `pagina_attiva`**: il valore restava fermo alla prima scheda mostrata se ne aprivi un'altra sopra senza chiudere la precedente; ora si aggiorna ad ogni cambio.
+- **`/api/citofono/live` più affidabile**: usa ora lo stesso segnale in tempo reale di `pagina_attiva` invece della vecchia euristica su sequenze show/hide, quindi anche l'indicatore nell'editor (accanto al nome del progetto) riflette correttamente il display reale.
+
 ## 0.10.1
 
 - **Backup completo con le immagini**: l'export ora include anche le immagini caricate (non solo le schede). Reimportando un backup, le immagini vengono ripristinate automaticamente, così reinstallando l'add-on non si perde più nulla. I backup fatti con la 0.10.0 (solo schede) restano importabili.

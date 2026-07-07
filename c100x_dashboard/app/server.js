@@ -473,6 +473,20 @@ app.post("/api/active", async (req, res) => {
 });
 
 // Node-RED / editor: fa comparire la scheda sul citofono ora (opzionale: name + duration)
+// --- Cosa e' davvero mostrato a schermo (riportato dal QML) ---
+// "idle" = schermo libero/home (incluso quando l'utente chiude con la rotella
+// laterale, o quando arriva una chiamata reale che porta via lo stack).
+// Letto dall'integrazione HA via il coordinator veloce (vedi custom_components).
+let lastSchedaShown = null;
+
+app.post("/api/scheda-state", (req, res) => {
+    const name = (req.body && typeof req.body.name === "string" && req.body.name.trim()) || null;
+    lastSchedaShown = name || "idle";
+    res.json({ ok: true, state: lastSchedaShown });
+});
+
+app.get("/api/scheda-state", (req, res) => { res.json({ state: lastSchedaShown }); });
+
 app.post("/api/show", async (req, res) => {
     const b = req.body || {};
     const a = await readActive();
@@ -608,11 +622,13 @@ app.get("/active", async (req, res) => {
 
 app.get("/api/citofono/live", async (req, res) => {
     const a = await readActive();
+    const online = (Date.now() - lastPoll) < 6000;
+    const showing = online && lastSchedaShown !== null && lastSchedaShown !== "idle";
     res.json({
-        online: (Date.now() - lastPoll) < 6000,
+        online,
         lastSeen: lastPoll || null,
-        activeName: a.name || null,
-        showing: (a.showSeq || 0) > (a.hideSeq || 0)
+        activeName: showing ? lastSchedaShown : null,
+        showing
     });
 });
 

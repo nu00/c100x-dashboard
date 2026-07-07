@@ -26,6 +26,12 @@ if (!path) { console.error("Uso: node patch-scheda-qml.js /percorso/main.qml htt
 
 const BLOCK = `
     ${BEGIN}
+    function reportSchedaState(name) {
+        var s = new XMLHttpRequest();
+        s.open("POST", schedaWatcher.addonBase + "/api/scheda-state");
+        s.setRequestHeader("Content-Type", "application/json");
+        s.send(JSON.stringify({ name: name || null }));
+    }
     Component {
         id: schedaPage
         SchedaPage {
@@ -33,8 +39,8 @@ const BLOCK = `
             addonBase: schedaWatcher.addonBase
             autoCloseSeconds: schedaWatcher.duration
             restartToken: schedaWatcher.showSeq
-            onBack: { schedaWatcher.showing = false; global.turnOffScreen() }
-            Component.onDestruction: schedaWatcher.showing = false
+            onBack: { schedaWatcher.showing = false; schedaWatcher.lastReportedName = ""; reportSchedaState(null); global.turnOffScreen() }
+            Component.onDestruction: { schedaWatcher.showing = false; schedaWatcher.lastReportedName = ""; reportSchedaState(null); }
         }
     }
     Timer {
@@ -50,6 +56,7 @@ const BLOCK = `
         property real lastShowSeq: -1
         property real lastHideSeq: -1
         property bool showing: false
+        property string lastReportedName: ""
         onTriggered: {
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function() {
@@ -75,7 +82,22 @@ const BLOCK = `
                             }
                             if (hseq !== schedaWatcher.lastHideSeq) {
                                 schedaWatcher.lastHideSeq = hseq;
-                                if (schedaWatcher.showing) { schedaWatcher.showing = false; global.turnOffScreen(); }
+                                if (schedaWatcher.showing) {
+                                    schedaWatcher.showing = false;
+                                    schedaWatcher.lastReportedName = "";
+                                    reportSchedaState(null);
+                                    global.turnOffScreen();
+                                }
+                            }
+                        }
+                        // Report del nome disaccoppiato dal gate show/hide: cosi' si
+                        // aggiorna anche quando una nuova scheda sostituisce quella
+                        // gia' visibile (stesso showing=true, nome diverso).
+                        if (schedaWatcher.showing) {
+                            var curName = schedaWatcher.schedaData.name || "scheda";
+                            if (curName !== schedaWatcher.lastReportedName) {
+                                schedaWatcher.lastReportedName = curName;
+                                reportSchedaState(curName);
                             }
                         }
                     } catch (e) {}
