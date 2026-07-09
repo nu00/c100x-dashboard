@@ -14,6 +14,7 @@ const I18N = {
     lv_confirm_lock: "Aprire davvero la serratura?",
     lv_restart: "Riavvia",
     lv_feedback_none: "Nessun tasto premuto", lv_feedback_pressed: "Tasto {0} premuto",
+    lv_backlight_on: "Schermo acceso", lv_backlight_off: "Schermo spento", lv_backlight_unknown: "Schermo: stato sconosciuto",
     el_image: "Immagine", el_icon: "Icona", el_entity_icon: "Icona entità", el_rect: "Rettangolo", el_circle: "Cerchio", el_triangle: "Triangolo",
     el_template: "Template", template_code: "Codice (Jinja2 + markdown)", template_hint: "Come una card markdown di Lovelace. Es: **Temp:** {{ states('sensor.temp') }}°C", template_preview: "Anteprima", template_refresh: "Aggiorna anteprima",
     color_template: "Colore condizionale (Jinja2)", color_template_hint: "Opzionale. Può ritornare un colore (es. #ff0000) oppure true/false per usare i due colori sotto.", color_if_true: "Colore se vero", color_if_false: "Colore se falso",
@@ -73,6 +74,7 @@ const I18N = {
     lv_confirm_lock: "Really open the lock?",
     lv_restart: "Restart",
     lv_feedback_none: "No button pressed yet", lv_feedback_pressed: "Button {0} pressed",
+    lv_backlight_on: "Screen on", lv_backlight_off: "Screen off", lv_backlight_unknown: "Screen: unknown state",
     el_image: "Image", el_icon: "Icon", el_entity_icon: "Entity icon", el_rect: "Rectangle", el_circle: "Circle", el_triangle: "Triangle",
     el_template: "Template", template_code: "Code (Jinja2 + markdown)", template_hint: "Like a Lovelace markdown card. E.g: **Temp:** {{ states('sensor.temp') }}°C", template_preview: "Preview", template_refresh: "Refresh preview",
     color_template: "Conditional color (Jinja2)", color_template_hint: "Optional. Can return a color (e.g. #ff0000) or true/false to use the two colors below.", color_if_true: "Color if true", color_if_false: "Color if false",
@@ -132,7 +134,7 @@ Object.assign(I18N.it, {
   distributeH: "Distribuisci in orizzontale", distributeV: "Distribuisci in verticale",
   copy_sel: "Copia selezione", z_forward: "Portato sopra", z_backward: "Portato sotto", z_front: "Sopra", z_back: "Sotto", grouped: "Raggruppati", ungrouped: "Separati", group: "Raggruppa", ungroup: "Separa", delete_sel: "Elimina {0} elementi",
   copied: "Copiati {0} elementi.", pasted: "Incollati {0} elementi.",
-  cito_online: "Citofono online", cito_offline: "Citofono non raggiunto", cito_showing: "Mostra: {0}"
+  cito_online: "Citofono online", cito_offline: "Citofono non raggiunto", cito_showing: "Mostra: {0}", cito_idle: "Citofono online — nessuna schermata a video",
 });
 Object.assign(I18N.en, {
   t_home: "My screens", home_sub: "Your saved screens", home_new: "New screen",
@@ -144,7 +146,7 @@ Object.assign(I18N.en, {
   distributeH: "Distribute horizontally", distributeV: "Distribute vertically",
   copy_sel: "Copy selection", z_forward: "Brought forward", z_backward: "Sent backward", z_front: "Forward", z_back: "Backward", grouped: "Grouped", ungrouped: "Ungrouped", group: "Group", ungroup: "Ungroup", delete_sel: "Delete {0} elements",
   copied: "Copied {0} elements.", pasted: "Pasted {0} elements.",
-  cito_online: "Intercom online", cito_offline: "Intercom not reached", cito_showing: "Showing: {0}"
+  cito_online: "Intercom online", cito_offline: "Intercom not reached", cito_showing: "Showing: {0}", cito_idle: "Intercom online — nothing on screen",
 });
 let LANG = (localStorage.getItem("cs_lang") || (navigator.language || "it").slice(0, 2).toLowerCase());
 if (!I18N[LANG]) LANG = "en";
@@ -1229,12 +1231,41 @@ function lvConnectRfb() {
   lvRfb = rfb;
 }
 
+const lvBacklightEl = document.getElementById("lv_backlight");
+let lvBacklightPollTimer = null;
+
+function lvRenderBacklight(on) {
+  if (on === true) { lvBacklightEl.dataset.state = "on"; lvBacklightEl.textContent = t("lv_backlight_on"); }
+  else if (on === false) { lvBacklightEl.dataset.state = "off"; lvBacklightEl.textContent = t("lv_backlight_off"); }
+  else { lvBacklightEl.dataset.state = "unknown"; lvBacklightEl.textContent = t("lv_backlight_unknown"); }
+}
+
+async function lvPollBacklightOnce() {
+  try {
+    const r = await fetch("api/backlight-state");
+    const d = await r.json();
+    lvRenderBacklight(typeof d.on === "boolean" ? d.on : null);
+  } catch (e) { /* non bloccante: lascia l'ultimo stato noto */ }
+}
+
+function startLvBacklightPoll() {
+  stopLvBacklightPoll();
+  lvPollBacklightOnce();
+  lvBacklightPollTimer = setInterval(lvPollBacklightOnce, 1500);
+}
+
+function stopLvBacklightPoll() {
+  if (lvBacklightPollTimer) { clearInterval(lvBacklightPollTimer); lvBacklightPollTimer = null; }
+}
+
 async function openLive() {
   liveModal.hidden = false;
   lvFitShell();
   lvLog.hidden = true;
   lvSetPlaceholder(t("lv_loading"));
-  lvFeedbackEl.textContent = t("lv_feedback_none");
+  lvFeedbackEl.textContent = "";
+  lvRenderBacklight(null);
+  startLvBacklightPoll();
   lvLoadSchedaList();
   const stopBtn = document.getElementById("lv_stop");
   stopBtn.textContent = t("lv_stop");
@@ -1251,6 +1282,7 @@ async function openLive() {
 
 async function stopLive() {
   lvWantConnected = false;
+  stopLvBacklightPoll();
   if (lvRfb) { try { lvRfb.disconnect(); } catch (_) { /* noop */ } lvRfb = null; }
   try { await fetch("api/live/stop", { method: "POST" }); } catch (e) { /* non bloccante */ }
 }
@@ -1287,9 +1319,26 @@ function lvButtonLabel(id) {
   };
   return map[id] || id;
 }
+let lvFeedbackFadeTimer = null;
 function lvSendButton(id, phase) {
   fetch("api/live/button", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ button: id, phase }) }).catch(() => {});
-  if (phase === "press") lvFeedbackEl.textContent = t("lv_feedback_pressed", lvButtonLabel(id));
+  if (phase !== "press") return;
+  lvFeedbackEl.textContent = t("lv_feedback_pressed", lvButtonLabel(id));
+  lvFeedbackEl.classList.remove("fading");
+  // Riavvia sempre il flash, anche se il testo e' identico al giro precedente
+  // (stesso tasto premuto due volte di fila): senza il reflow forzato, togliere
+  // e rimettere subito la stessa classe non la farebbe ripartire.
+  lvFeedbackEl.classList.remove("flash");
+  void lvFeedbackEl.offsetWidth;
+  lvFeedbackEl.classList.add("flash");
+  if (lvFeedbackFadeTimer) clearTimeout(lvFeedbackFadeTimer);
+  lvFeedbackFadeTimer = setTimeout(() => {
+    lvFeedbackEl.classList.add("fading");
+    setTimeout(() => {
+      lvFeedbackEl.textContent = "";
+      lvFeedbackEl.classList.remove("flash", "fading");
+    }, 260);
+  }, 2200);
 }
 document.querySelectorAll("#lv_citoButtons .shell-btn:not([disabled])").forEach((btn) => {
   const id = btn.dataset.btn;
@@ -1529,7 +1578,7 @@ async function buildThumb(container, name) {
 }
 
 /* ---- stato citofono (online / sta mostrando) ---- */
-function startCitoStatus() { pollCito(); setInterval(pollCito, 3000); }
+function startCitoStatus() { pollCito(); setInterval(pollCito, 3000); startMainBacklightPoll(); }
 async function pollCito() {
   const pill = document.getElementById("citoStatus"); if (!pill) return;
   const txt = pill.querySelector(".cs-txt");
@@ -1537,9 +1586,23 @@ async function pollCito() {
     const d = await (await fetch("api/citofono/live")).json();
     if (!d.online) { pill.className = "cito-status off"; txt.textContent = t("cito_offline"); pill.title = t("cito_offline"); return; }
     if (d.showing && d.activeName) { pill.className = "cito-status showing"; txt.textContent = t("cito_showing", d.activeName); pill.title = txt.textContent; }
-    else { pill.className = "cito-status online"; txt.textContent = t("cito_online"); pill.title = txt.textContent; }
+    else { pill.className = "cito-status online"; txt.textContent = t("cito_idle"); pill.title = txt.textContent; }
   } catch { pill.className = "cito-status off"; if (txt) txt.textContent = ""; }
 }
+
+async function pollMainBacklight() {
+  const pill = document.getElementById("mainBacklight"); if (!pill) return;
+  const txt = pill.querySelector(".cs-txt");
+  try {
+    const d = await (await fetch("api/backlight-state")).json();
+    if (typeof d.on !== "boolean") { pill.hidden = true; return; }
+    pill.hidden = false;
+    pill.className = "cito-status " + (d.on ? "online" : "off");
+    txt.textContent = d.on ? t("lv_backlight_on") : t("lv_backlight_off");
+    pill.title = txt.textContent;
+  } catch { pill.hidden = true; }
+}
+function startMainBacklightPoll() { pollMainBacklight(); setInterval(pollMainBacklight, 2000); }
 
 
 /* ===================== fix UI editor ===================== */

@@ -140,6 +140,9 @@ Richiede il bundle personalizzato del controller citato sopra (è quello che avv
 server VNC sia l'iniettore sul citofono), quindi entrambi fanno ora parte dell'installazione SSH
 standard, non sono più opzionali.
 
+Un piccolo indicatore della retroilluminazione (schermo acceso/spento) è sempre visibile sia
+nella vista live sia nella barra in alto dell'editor, e riflette lo stato reale del citofono.
+
 > **Una nota sui rischi.** L'iniezione a livello di sistema tramite `ptrace` è per natura più
 > invasiva di una semplice chiamata a una funzione QML — durante lo sviluppo ha causato un
 > riavvio del citofono (mai più riprodotto da allora, dopo una correzione: ora consegna un solo

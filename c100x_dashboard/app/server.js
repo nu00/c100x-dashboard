@@ -15,10 +15,10 @@ const path = require("path");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.12.0";
+const VERSION = "0.12.1";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "16";
+const RENDERER_VERSION = "17";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";

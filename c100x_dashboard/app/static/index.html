@@ -19,6 +19,7 @@
     <span>C100X&nbsp;<strong>Dashboard</strong></span>
     <span class="screen-spec">800 × 480</span>
     <span id="citoStatus" class="cito-status off" title=""><span class="cs-dot"></span><span class="cs-txt"></span></span>
+    <span id="mainBacklight" class="cito-status off" title="" hidden><span class="cs-dot"></span><span class="cs-txt"></span></span>
   </div>
   <div class="layout-controls">
     <button id="btnHome" class="iconbtn" data-i18n-title="t_home" title="Le mie schede"><span class="pal-ico" data-ico="home"></span></button>
@@ -217,7 +218,8 @@
       </div>
     </div>
     <div class="lv-feedback-row">
-      <span id="lv_feedback" class="lv-feedback" data-i18n="lv_feedback_none">Nessun tasto premuto</span>
+      <span id="lv_backlight" class="lv-backlight" data-state="unknown"></span>
+      <span id="lv_feedback" class="lv-feedback"></span>
       <select id="lv_scheda_select" class="lv-scheda-select"></select>
       <button id="lv_scheda_show" data-i18n="show_now">Mostra ora</button>
     </div>

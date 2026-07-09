@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.12.1
+
+**🇮🇹 Italiano**
+
+- **Indicatore retroilluminazione ovunque**: oltre alla vista live, ora compare anche nella barra in alto dell'editor principale, sempre visibile mentre lavori.
+- **Fix stato retroilluminazione dopo un riavvio dell'add-on**: il QML riportava lo stato solo quando cambiava; dopo un riavvio dell'add-on (che perde la memoria di sessione) restava "sconosciuto" finché qualcuno non toccava davvero lo schermo fisico. Ora riporta lo stato reale ad ogni ciclo (~300ms), così l'add-on lo riacquisisce subito. **Richiede una nuova installazione via SSH** (renderer QML aggiornato).
+- **Testo più chiaro quando il citofono non mostra nulla**: "Citofono online" da solo non diceva molto; ora è "Citofono online — nessuna schermata a video".
+- **Fix vista live**: il messaggio "Nessun tasto premuto" è stato tolto (resta vuoto finché non premi qualcosa), il feedback di un tasto premuto sparisce da solo dopo un paio di secondi invece di restare per sempre, e premere due volte di fila lo stesso tasto ora dà comunque un riscontro visivo (prima, a parità di testo, sembrava non fosse successo nulla).
+
+**🇬🇧 English**
+
+- **Backlight indicator everywhere**: besides the live view, it now also shows in the main editor's top bar, always visible while you work.
+- **Fix for backlight state after an add-on restart**: the QML only reported state on change; after an add-on restart (which loses session memory) it stayed "unknown" until someone actually touched the physical screen. It now reports the real state every cycle (~300ms), so the add-on picks it up immediately. **Requires a new SSH install** (updated QML renderer).
+- **Clearer wording when the intercom isn't showing anything**: "Intercom online" alone wasn't very informative; it now reads "Intercom online — nothing on screen".
+- **Live view fixes**: the "No button pressed yet" message was removed (stays blank until you press something), the pressed-button feedback now fades away on its own after a couple of seconds instead of staying forever, and pressing the same button twice in a row now still gives a visible response (previously, since the text stayed identical, it looked like nothing had happened).
+
 ## 0.12.0
 
 **🇮🇹 Italiano**

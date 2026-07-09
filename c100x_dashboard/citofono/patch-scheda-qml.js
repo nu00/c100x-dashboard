@@ -42,12 +42,12 @@ const BLOCK = `
     function dashScreenOff() { return global.screenState.state === ScreenState.ScreenOff; }
     function dashWakeScreen() { global.screenState.enableState(ScreenState.ForcedNormal); }
 
-    property bool dashLastReportedBacklight: true // valore iniziale qualunque, il primo giro riporta comunque
-    property bool dashBacklightReportedOnce: false
+    // Riporta sempre, ad ogni ciclo (non solo ai cambiamenti): se riportassimo
+    // solo i cambiamenti, dopo un riavvio dell'add-on (che perde la memoria
+    // dello stato) resteremmo "sconosciuti" finche' qualcuno non tocca
+    // davvero lo schermo fisico. Costo trascurabile: una POST leggera ogni
+    // 300ms, stesso ritmo del polling gia' in corso.
     function dashReportBacklight(on) {
-        if (dashBacklightReportedOnce && on === dashLastReportedBacklight) return;
-        dashBacklightReportedOnce = true;
-        dashLastReportedBacklight = on;
         var s = new XMLHttpRequest();
         s.open("POST", schedaWatcher.addonBase + "/api/backlight-state");
         s.setRequestHeader("Content-Type", "application/json");

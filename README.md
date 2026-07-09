@@ -133,6 +133,9 @@ This needs the custom controller bundle mentioned above (it's what starts/stops 
 server and the injector on the intercom), so both are part of the standard SSH install now,
 not optional.
 
+A small backlight indicator (screen on/off) is always visible both in the live view and in the
+editor's top bar, reflecting the intercom's real state.
+
 > **A note on risk.** System-level injection via `ptrace` is inherently more invasive than a
 > plain QML function call — during development it caused one intercom reboot (not reproduced
 > since, after a fix: it now delivers one input event at a time, matching how the real device
