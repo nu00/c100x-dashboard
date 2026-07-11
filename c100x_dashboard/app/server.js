@@ -15,10 +15,10 @@ const path = require("path");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.12.1";
+const VERSION = "0.12.2";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "17";
+const RENDERER_VERSION = "18";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -961,17 +961,28 @@ app.post("/api/live/button", async (req, res) => {
 });
 
 // ===== Stato retroilluminazione display (per l'entita' light in HA) =====
-// Il QML riporta lo stato reale (global.screenState) ogni ~300ms; l'integrazione
-// HA legge qui per il suo coordinator, e accoda comandi accendi/spegni che il
-// QML consuma allo stesso ritmo.
-let backlightOn = null; // null = non ancora riportato
+// Letto periodicamente dal nuovo endpoint del controller (/backlight-status),
+// che legge il sysfs del kernel direttamente — non piu' dal QML/global.screenState
+// di Qt. Motivo: durante e subito dopo una chiamata in arrivo, lo stato
+// Qt-side puo' disallinearsi dalla realta' (osservato: l'entita' restava "on"
+// con lo schermo fisicamente spento). Il sysfs riflette sempre lo stato vero,
+// indipendentemente da eventuali intoppi del QML in quel momento.
+let backlightOn = null; // null = non ancora letto
 let backlightQueue = [];
 
-app.post("/api/backlight-state", (req, res) => {
-    const b = req.body || {};
-    backlightOn = !!b.on;
-    res.json({ ok: true });
-});
+async function pollBacklightOnce() {
+    try {
+        const c = await readCfg();
+        const host = (c.host || "").trim();
+        if (!host) return;
+        const r = await fetch(`http://${host}:${CONTROLLER_PORT}/backlight-status?raw=true`, { signal: AbortSignal.timeout(4000) });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (typeof d.on === "boolean") backlightOn = d.on;
+    } catch (e) { /* non bloccante: manteniamo l'ultimo valore noto finche' non torna a rispondere */ }
+}
+pollBacklightOnce();
+setInterval(pollBacklightOnce, 1500);
 
 app.get("/api/backlight-state", (req, res) => {
     res.json({ on: backlightOn });

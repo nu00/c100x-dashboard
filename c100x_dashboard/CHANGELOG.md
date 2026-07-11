@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.12.2
+
+**🇮🇹 Italiano**
+
+- **Fix stato retroilluminazione durante/dopo una chiamata**: l'entità `light.retroilluminazione_display` poteva restare bloccata su "acceso" con lo schermo fisicamente spento, in certe fasi attorno a una chiamata in arrivo — causa: ci basavamo sullo stato interno di Qt (`global.screenState`), che in quella fase può disallinearsi dalla realtà. Ora l'add-on legge lo stato **direttamente dal kernel** (sysfs, `/sys/class/backlight/.../brightness`) tramite un nuovo endpoint sul controller, bypassando Qt del tutto per questa lettura specifica.
+- Il QML non riporta più periodicamente lo stato (diventato ridondante); continua solo a eseguire i comandi accendi/spegni in arrivo da Home Assistant, che richiedono comunque l'API di Qt per agire sullo schermo.
+
+**🇬🇧 English**
+
+- **Fix for backlight state during/after a call**: the `light.retroilluminazione_display` entity could get stuck showing "on" with the screen physically off, in certain phases around an incoming call — cause: we relied on Qt's internal state (`global.screenState`), which can drift from reality during that phase. The add-on now reads the state **directly from the kernel** (sysfs, `/sys/class/backlight/.../brightness`) via a new controller endpoint, bypassing Qt entirely for this specific reading.
+- The QML no longer periodically reports state (became redundant); it still only executes on/off commands coming from Home Assistant, which do require Qt's API to actually act on the screen.
+
 ## 0.12.1
 
 **🇮🇹 Italiano**

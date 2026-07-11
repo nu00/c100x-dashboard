@@ -39,27 +39,20 @@ const BLOCK = `
     // pressione fisica vera per il firmware, funziona ovunque (menu nativo
     // incluso), non solo dentro le nostre schede. Qui restano solo le
     // funzioni per la retroilluminazione (entita' light in HA).
-    function dashScreenOff() { return global.screenState.state === ScreenState.ScreenOff; }
     function dashWakeScreen() { global.screenState.enableState(ScreenState.ForcedNormal); }
 
-    // Riporta sempre, ad ogni ciclo (non solo ai cambiamenti): se riportassimo
-    // solo i cambiamenti, dopo un riavvio dell'add-on (che perde la memoria
-    // dello stato) resteremmo "sconosciuti" finche' qualcuno non tocca
-    // davvero lo schermo fisico. Costo trascurabile: una POST leggera ogni
-    // 300ms, stesso ritmo del polling gia' in corso.
-    function dashReportBacklight(on) {
-        var s = new XMLHttpRequest();
-        s.open("POST", schedaWatcher.addonBase + "/api/backlight-state");
-        s.setRequestHeader("Content-Type", "application/json");
-        s.send(JSON.stringify({ on: on }));
-    }
+    // Il report periodico dello stato e' stato tolto da qui: l'add-on ora lo
+    // legge direttamente dal sysfs del kernel tramite un endpoint dedicato
+    // sul controller (bypassa global.screenState di Qt, che durante/dopo una
+    // chiamata in arrivo puo' disallinearsi dalla realta' — osservato).
+    // Restano solo i comandi accendi/spegni: azionare davvero lo schermo
+    // richiede comunque l'API di Qt, quella parte non si puo' spostare fuori.
     Timer {
         id: backlightPoller
         interval: 300
         running: true
         repeat: true
         onTriggered: {
-            dashReportBacklight(!dashScreenOff());
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
