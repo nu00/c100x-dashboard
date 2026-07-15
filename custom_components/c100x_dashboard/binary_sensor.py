@@ -24,7 +24,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    CMD_CITOFONO_LIBERO,
+    CITOFONO_LIBERO_COMMANDS,
     DOMAIN,
     MQTT_TOPIC_LASTWILL,
     MQTT_TOPIC_TX,
@@ -135,7 +135,7 @@ class C100xCitofonoOccupatoSensor(_MqttFallbackBinarySensor):
         payload = (msg.payload or "").strip()
         if not payload:
             return
-        if payload == CMD_CITOFONO_LIBERO:
+        if payload in CITOFONO_LIBERO_COMMANDS:
             self._attr_is_on = False
             self.async_write_ha_state()
         elif _RE_OCCUPATO.match(payload):

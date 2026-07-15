@@ -34,7 +34,18 @@ const FRAME_BYTES = WIDTH * HEIGHT * BYTES_PER_PIXEL;
 
 const FB_SYS_BASE = "/sys/class/graphics/" + FB_DEV.split("/").pop();
 
+// Quando mostriamo fb1 (il caso normale, la GUI Qt), componiamo anche fb0
+// (lo sfondo hardware — dove scriviamo camera/video) sotto di lui, usando il
+// canale alpha di fb1 — cosi' la vista live rispecchia davvero quello che si
+// vede a schermo, non solo il livello Qt. Se invece questo processo viene
+// avviato esplicitamente per ispezionare fb0 da solo (debug), niente
+// composizione: si mostra fb0 cosi' com'e'.
+const COMPOSITE_FB0 = FB_DEV === "/dev/fb1";
+const FB0_DEV = "/dev/fb0";
+const FB0_SYS_BASE = "/sys/class/graphics/fb0";
+
 let fbFd = null;
+let fb0Fd = null;
 function openFb() {
     try {
         fbFd = fs.openSync(FB_DEV, "r");
@@ -42,6 +53,15 @@ function openFb() {
     } catch (e) {
         console.error(`[fb-vnc] impossibile aprire ${FB_DEV}:`, e.message);
         fbFd = null;
+    }
+    if (COMPOSITE_FB0) {
+        try {
+            fb0Fd = fs.openSync(FB0_DEV, "r");
+            console.log(`[fb-vnc] ${FB0_DEV} aperto per composizione (fd=${fb0Fd})`);
+        } catch (e) {
+            console.error(`[fb-vnc] impossibile aprire ${FB0_DEV} (composizione disattivata):`, e.message);
+            fb0Fd = null;
+        }
     }
 }
 openFb();
@@ -52,12 +72,9 @@ openFb();
 // causava lag di decine di secondi e istabilita'. fs.read/fs.readFile usano
 // il thread-pool di libuv, quindi il resto del processo (invio dati ai
 // client, gestione socket) continua a girare anche durante una lettura lenta.
-function readFrameAsync(cb) {
-    if (fbFd === null) {
-        openFb();
-        if (fbFd === null) return cb(null);
-    }
-    fs.readFile(FB_SYS_BASE + "/pan", "utf8", (errPan, raw) => {
+function readOneFramebuffer(fd, sysBase, cb) {
+    if (fd === null) return cb(null);
+    fs.readFile(sysBase + "/pan", "utf8", (errPan, raw) => {
         let panLines = 0;
         if (!errPan) {
             const y = parseInt((raw || "").trim().split(",")[1], 10);
@@ -65,15 +82,48 @@ function readFrameAsync(cb) {
         }
         const offset = panLines * BYTES_PER_LINE;
         const buf = Buffer.allocUnsafe(FRAME_BYTES);
-        fs.read(fbFd, buf, 0, FRAME_BYTES, offset, (errRead, bytesRead) => {
-            if (errRead) {
-                console.error("[fb-vnc] errore lettura framebuffer:", errRead.message);
-                try { fs.close(fbFd, () => {}); } catch (_) { /* noop */ }
-                fbFd = null;
-                return cb(null);
-            }
+        fs.read(fd, buf, 0, FRAME_BYTES, offset, (errRead, bytesRead) => {
+            if (errRead) return cb(null, errRead);
             if (bytesRead < FRAME_BYTES) buf.fill(0, bytesRead);
             cb(buf);
+        });
+    });
+}
+
+// Fonde fb0 (sfondo) sotto fb1 (GUI Qt) usando il canale alpha di fb1 — stessa
+// composizione che fa l'hardware IPU per lo schermo vero. Scrive il risultato
+// dentro "top" stesso (fb1), non serve un buffer separato.
+function compositeOver(top, bottom) {
+    for (let i = 0; i < top.length; i += 4) {
+        const a = top[i + 3];
+        if (a === 0) {
+            top[i] = bottom[i]; top[i + 1] = bottom[i + 1]; top[i + 2] = bottom[i + 2]; top[i + 3] = 255;
+        } else if (a < 255) {
+            top[i] = (top[i] * a + bottom[i] * (255 - a)) >> 8;
+            top[i + 1] = (top[i + 1] * a + bottom[i + 1] * (255 - a)) >> 8;
+            top[i + 2] = (top[i + 2] * a + bottom[i + 2] * (255 - a)) >> 8;
+            top[i + 3] = 255;
+        }
+    }
+}
+
+function readFrameAsync(cb) {
+    if (fbFd === null) {
+        openFb();
+        if (fbFd === null) return cb(null);
+    }
+    readOneFramebuffer(fbFd, FB_SYS_BASE, (top, errRead) => {
+        if (errRead) {
+            console.error("[fb-vnc] errore lettura framebuffer:", errRead.message);
+            try { fs.close(fbFd, () => {}); } catch (_) { /* noop */ }
+            fbFd = null;
+            return cb(null);
+        }
+        if (!COMPOSITE_FB0 || fb0Fd === null) return cb(top);
+        readOneFramebuffer(fb0Fd, FB0_SYS_BASE, (bottom, errRead0) => {
+            if (errRead0 || !bottom) return cb(top); // fb0 non disponibile: mostra solo fb1, meglio di niente
+            compositeOver(top, bottom);
+            cb(top);
         });
     });
 }

@@ -60,9 +60,75 @@ FocusScope {
         return (m.prefix || "") + v + (m.suffix || "");
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: (root.schedaData && root.schedaData.background) ? root.schedaData.background : "#000000"
+    // Se una o piu' schede contengono elementi "camera", il video viene
+    // mostrato a livello di sistema (VPU/JPEG sull'IPU, non un vero elemento
+    // QML) — qui dobbiamo solo lasciare quei rettangoli genuinamente
+    // trasparenti, non semplicemente disegnarci sopra un colore trasparente
+    // (che in Qt rivelerebbe solo altro contenuto QML sotto, non l'hardware
+    // framebuffer sottostante — vedi indagine c100x-dashboard).
+    //
+    // Con piu' telecamere contemporanee, non basta piu' la vecchia
+    // scomposizione a 4 fasce fisse (valida solo per UN buco): serve una
+    // scomposizione generale. backgroundRects taglia lo schermo in strisce
+    // orizzontali ai bordi Y di ogni buco, poi ogni striscia in segmenti ai
+    // bordi X dei buchi che la intersecano, scartando i segmenti coperti da
+    // un buco — il risultato e' l'insieme di rettangoli che copre "tutto
+    // tranne i buchi", qualunque sia il numero di telecamere.
+    property var cameraHoles: {
+        var arr = [];
+        if (!root.schedaData || !root.schedaData.elements) return arr;
+        for (var ci = 0; ci < root.schedaData.elements.length; ci++) {
+            var ce = root.schedaData.elements[ci];
+            if (ce.type === "camera") arr.push({ x: ce.x || 0, y: ce.y || 0, w: ce.w || 10, h: ce.h || 10 });
+        }
+        return arr;
+    }
+    property var backgroundRects: {
+        var holes = root.cameraHoles;
+        if (holes.length === 0) return [{ x: 0, y: 0, w: width, h: height }];
+        function uniqSorted(vals) {
+            var seen = {}, out = [];
+            for (var i = 0; i < vals.length; i++) { var v = vals[i]; if (!seen[v]) { seen[v] = true; out.push(v); } }
+            out.sort(function (a, b) { return a - b; });
+            return out;
+        }
+        var ys = [0, height];
+        for (var i = 0; i < holes.length; i++) { ys.push(holes[i].y); ys.push(holes[i].y + holes[i].h); }
+        ys = uniqSorted(ys);
+        var rects = [];
+        for (var r = 0; r < ys.length - 1; r++) {
+            var y0 = ys[r], y1 = ys[r + 1];
+            if (y1 <= y0) continue;
+            var midY = (y0 + y1) / 2;
+            var xs = [0, width];
+            for (i = 0; i < holes.length; i++) {
+                var hy = holes[i];
+                if (midY >= hy.y && midY < hy.y + hy.h) { xs.push(hy.x); xs.push(hy.x + hy.w); }
+            }
+            xs = uniqSorted(xs);
+            for (var cx = 0; cx < xs.length - 1; cx++) {
+                var x0 = xs[cx], x1 = xs[cx + 1];
+                if (x1 <= x0) continue;
+                var midX = (x0 + x1) / 2;
+                var covered = false;
+                for (i = 0; i < holes.length; i++) {
+                    var hc = holes[i];
+                    if (midX >= hc.x && midX < hc.x + hc.w && midY >= hc.y && midY < hc.y + hc.h) { covered = true; break; }
+                }
+                if (!covered) rects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+            }
+        }
+        return rects;
+    }
+    property color bgColor: (root.schedaData && root.schedaData.background) ? root.schedaData.background : "#000000"
+
+    Repeater {
+        model: root.backgroundRects
+        Rectangle {
+            x: modelData.x; y: modelData.y
+            width: modelData.w; height: modelData.h
+            color: root.bgColor
+        }
     }
 
     Repeater {

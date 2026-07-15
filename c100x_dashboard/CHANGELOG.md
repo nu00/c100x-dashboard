@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.13.0
+
+**🇮🇹 Italiano**
+
+- **Nuovo elemento "Telecamera"** nell'editor: mostra lo stream di una o più `camera.*` di Home Assistant (o un URL diretto) direttamente sul display del citofono, in aree scelte e ridimensionabili.
+- **Decodifica diretta, non tramite GStreamer**: dopo aver scoperto un bug noto e mai risolto in `gstreamer-imx` (il decoder non riporta correttamente i propri tempi per sorgenti live, causando blocchi periodici), il citofono ora legge **direttamente** da Home Assistant (`camera_proxy_stream`, lo stesso endpoint usato dal frontend di Lovelace) e decodifica JPEG lui stesso — un solo passaggio pesante, video fluido in tempo reale, nessun carico aggiuntivo su Home Assistant.
+- **Compatibile con qualsiasi `camera.*`**, a prescindere dal codec nativo della telecamera: `camera_proxy_stream` normalizza sempre in MJPEG.
+- **Multi-camera**: puoi aggiungere quante telecamere vuoi nella stessa scheda — ognuna gira in una pipeline indipendente sul citofono, senza toccarsi a vicenda.
+- **URL diretto universale**: anche per un URL diretto (non un'entità HA), il codec viene rilevato automaticamente (MJPEG o H.264, quest'ultimo tramite il decoder hardware VPU — `libimxvpuapi`, libreria ufficiale Freescale/NXP già presente sul citofono).
+- **RTSP**: supporto al protocollo, per telecamere IP che lo usano nativamente.
+- **Rinnovo automatico del token**: il token di accesso di ogni telecamera (che HA ruota ogni ~5 minuti) viene rinfrescato in anticipo, invece di aspettare che la pipeline si blocchi.
+- **Stop automatico affidabile**: la pipeline camera si ferma anche passando direttamente da una scheda all'altra, o quando lo stato reale del citofono cambia (es. una chiamata in arrivo) — non solo con un "nascondi" esplicito.
+- **Vista live**: ora mostra anche `fb0` (dove scrive la telecamera) sotto `fb1` (la GUI), non solo quest'ultima — rispecchia davvero quello che si vede a schermo.
+- **Aggiornamento più sicuro**: l'entità di aggiornamento ora aspetta che il citofono torni online con la versione nuova prima di considerarsi conclusa, evitando il rischio di sovrapporre due installazioni durante un riavvio.
+- **Pallino di aggiornamento pendente** sul pulsante "Citofono" nell'editor.
+- Sorgenti compilate incluse (`citofono/vpu-decode-src/`), con un README tecnico su perché/come, per trasparenza e futura manutenzione.
+
+**🇬🇧 English**
+
+- **New "Camera" element** in the editor: shows one or more Home Assistant `camera.*` streams (or a direct URL) right on the intercom's display, in chosen, resizable areas.
+- **Direct decoding, not through GStreamer**: after finding a known, never-fixed bug in `gstreamer-imx` (the decoder doesn't correctly report its own timing for live sources, causing periodic stalls), the intercom now reads **directly** from Home Assistant (`camera_proxy_stream`, the same endpoint the Lovelace frontend uses) and decodes JPEG itself — one heavy step, smooth real-time video, no extra load on Home Assistant.
+- **Compatible with any `camera.*`**, regardless of the camera's native codec: `camera_proxy_stream` always normalizes to MJPEG.
+- **Multi-camera**: add as many cameras as you like to the same screen — each runs its own independent pipeline on the intercom, without interfering with each other.
+- **Universal direct URL**: even for a direct URL (not an HA entity), the codec is auto-detected (MJPEG or H.264, the latter via the VPU hardware decoder — `libimxvpuapi`, an official Freescale/NXP library already present on the intercom).
+- **RTSP**: protocol support, for IP cameras that use it natively.
+- **Automatic token refresh**: each camera's access token (which HA rotates every ~5 minutes) is refreshed ahead of time, instead of waiting for the pipeline to stall.
+- **Reliable auto-stop**: the camera pipeline stops even when switching directly between screens, or when the intercom's real state changes (e.g. an incoming call) — not just on an explicit "hide".
+- **Live view**: now also shows `fb0` (where the camera writes) underneath `fb1` (the GUI), not just the latter — truly reflects what's on screen.
+- **Safer updates**: the update entity now waits for the intercom to come back online with the new version before considering itself done, avoiding the risk of overlapping two installs during a reboot.
+- **Pending-update dot** on the "Intercom" button in the editor.
+- Compiled sources included (`citofono/vpu-decode-src/`), with a technical README on why/how, for transparency and future maintenance.
+
 ## 0.12.2
 
 **🇮🇹 Italiano**

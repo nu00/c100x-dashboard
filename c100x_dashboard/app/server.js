@@ -12,13 +12,14 @@ const express = require("express");
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
+const { spawn } = require("child_process");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.12.2";
+const VERSION = "0.13.0";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "18";
+const RENDERER_VERSION = "19";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -79,6 +80,33 @@ async function getState(entity) {
     if (!r.ok) throw new Error("HA " + r.status);
     return r.json();
 }
+
+// Costruisce l'URL di camera_proxy_stream con il token VERO dell'entita' (il
+// suo attributo "access_token", che HA ruota periodicamente) — lo stesso
+// meccanismo che usa il frontend di Lovelace per davvero (verificato negli
+// strumenti sviluppatore del browser: il video passa da qui, autenticato con
+// un token in query string, non un header).
+//
+// IMPORTANTE: usiamo l'indirizzo LAN diretto di HA (c.haUrl), NON il proxy
+// interno del supervisor — verificato nel codice sorgente di HA
+// (homeassistant/components/camera/__init__.py, classe CameraView): questa
+// vista specifica accetta "request[KEY_AUTHENTICATED] OR token in
+// camera.access_tokens", ma il proxy del supervisor inietta SEMPRE un suo
+// header Authorization in ogni richiesta che ci passa attraverso — se quello
+// non basta da solo per l'autenticazione standard, la vista risponde 401
+// invece di 403 (vedi codice: "if hdrs.AUTHORIZATION in request.headers:
+// raise HTTPUnauthorized"). Il nostro token in query non ha mai la
+// possibilita' di essere controllato. Andando all'indirizzo diretto,
+// nessun header Authorization viene aggiunto per conto nostro, esattamente
+// come fa il browser dell'utente (verificato: funziona).
+async function getCameraProxyStreamUrl(entity) {
+    const c = await readCfg();
+    if (!c.haUrl) throw new Error("URL di Home Assistant non configurato (vedi impostazioni citofono) — serve l'indirizzo diretto, il proxy del supervisor non funziona per questo endpoint specifico");
+    const state = await getState(entity);
+    const token = state && state.attributes && state.attributes.access_token;
+    if (!token) throw new Error("l'entita' non ha un access_token (non sembra una vera entita' camera)");
+    return `${c.haUrl}/api/camera_proxy_stream/${encodeURIComponent(entity)}?token=${encodeURIComponent(token)}`;
+}
 async function getAllStates() {
     if (!SUPERVISOR_TOKEN) return [];
     const r = await fetch(`${HA_API}/states`, { headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}` } });
@@ -116,6 +144,56 @@ async function renderTemplate(code) {
         return "⚠ " + txt.slice(0, 120);
     }
     return txt;
+}
+
+// NOTA STORICA: qui vivevano due tentativi precedenti abbandonati:
+// 1) HLS/stream component di HA via WebSocket (camera/stream) — funzionava,
+//    ma richiedeva gestire il rinnovo di sessioni che scadono.
+// 2) camera_proxy_stream con header "Authorization: Bearer" — sembrava non
+//    dare mai dati (si scopri' poi che l'endpoint vuole il token in query
+//    string, non un header: la connessione di rete funzionava gia' bene).
+// La soluzione buona, sotto (getCameraProxyStreamUrl), usa camera_proxy_stream
+// con il token VERO letto dall'attributo "access_token" dell'entita' — lo
+// stesso meccanismo confermato nel browser (strumenti sviluppatore) per il
+// frontend di Lovelace.
+
+
+// Con la vecchia pipeline GStreamer, fMP4/LL-HLS non era leggibile (mancava
+// qtdemux). Con la nuova pipeline (ffmpeg-armhf + vpu-fb-decode sul citofono)
+// il contenitore non conta piu' — ffmpeg legge fMP4 e MPEG-TS indifferentemente.
+// L'unico vincolo reale ora e' il CODEC: il nostro decoder VPU sa fare solo
+// H.264. Interroghiamo la sorgente con ffmpeg stesso (gia' installato
+// sull'add-on per il relay) invece di analizzare a mano il testo della
+// playlist — piu' affidabile, funziona con qualunque formato ffmpeg capisca.
+function probeCodec(url) {
+    return new Promise((resolve) => {
+        const child = spawn("ffmpeg", ["-i", url, "-t", "1", "-f", "null", "-"], { stdio: ["ignore", "ignore", "pipe"] });
+        let stderr = "";
+        child.stderr.on("data", (d) => { stderr += d.toString(); });
+        const timeout = setTimeout(() => { try { child.kill("SIGKILL"); } catch (e) { /* ignore */ } }, 20000);
+        child.on("close", () => {
+            clearTimeout(timeout);
+            console.log(`[c100x-dashboard] CAMERA probe codec (${url}):\n${stderr.slice(0, 2000)}`);
+            const m = stderr.match(/Video:\s*([a-z0-9_]+)/i);
+            resolve({ codec: m ? m[1].toLowerCase() : null, raw: stderr });
+        });
+        child.on("error", (e) => { clearTimeout(timeout); resolve({ codec: null, raw: String(e) }); });
+    });
+}
+
+async function checkCameraCompatibility(url) {
+    const p = await probeCodec(url);
+    if (!p.codec) {
+        return { ok: false, error: "impossibile determinare il codec della sorgente (non raggiungibile o formato sconosciuto)" };
+    }
+    if (p.codec === "h264") {
+        return { ok: true, codec: "h264" };
+    }
+    // Non H.264: serve una ricodifica (il nostro relay ffmpeg->libx264 la fa
+    // gia' in automatico per l'entita' HA) — non e' un errore bloccante,
+    // solo un'informazione per l'utente.
+    return { ok: true, codec: p.codec, needsTranscode: true,
+        warning: `Questa sorgente usa il codec "${p.codec}" (non H.264) — verra' ricodificata automaticamente in H.264 dall'add-on prima di essere mostrata sul citofono. Nessuna azione necessaria da parte tua.` };
 }
 
 // Applica un colore condizionale a un elemento, valutando un template Jinja2 che puo':
@@ -201,6 +279,30 @@ app.post("/api/template-preview", async (req, res) => {
         }
         res.json(out);
     } catch (e) { res.status(502).json({ error: String(e) }); }
+});
+
+// Verifica una sorgente camera. Per URL diretto: controlla il codec (quel
+// percorso usa la decodifica hardware H.264, serve H.264 nativo). Per
+// entita' HA: basta confermare che risponda — la modalita' mjpeg (quella
+// usata per le entita') funziona con qualunque codec nativo della
+// telecamera, dato che camera_proxy_stream la normalizza sempre in MJPEG.
+app.post("/api/camera-check", async (req, res) => {
+    const b = req.body || {};
+    try {
+        if (b.sourceType === "url") {
+            const streamUrl = (b.url || "").trim();
+            if (!streamUrl) return res.json({ ok: false, error: "URL vuoto" });
+            const check = await checkCameraCompatibility(streamUrl);
+            return res.json({ ...check, streamUrl });
+        }
+        if (!b.entity) return res.json({ ok: false, error: "entita' non specificata" });
+        const streamUrl = await getCameraProxyStreamUrl(b.entity);
+        const p = await probeCodec(streamUrl);
+        if (!p.codec) return res.json({ ok: false, error: "impossibile raggiungere la sorgente" });
+        res.json({ ok: true, codec: p.codec, streamUrl });
+    } catch (e) {
+        res.json({ ok: false, error: String(e.message || e) });
+    }
 });
 
 // Icone assegnate alle entita' (solo mdi:, perche' poi le serviamo al citofono)
@@ -481,8 +583,22 @@ let lastSchedaShown = null;
 
 app.post("/api/scheda-state", (req, res) => {
     const name = (req.body && typeof req.body.name === "string" && req.body.name.trim()) || null;
-    lastSchedaShown = name || "idle";
+    const newState = name || "idle";
+    const changed = newState !== lastSchedaShown;
+    lastSchedaShown = newState;
     res.json({ ok: true, state: lastSchedaShown });
+
+    // Se lo stato VERO (non la nostra richiesta) e' cambiato verso una scheda
+    // senza telecamera (es. chiamata reale in arrivo, chiusura manuale con la
+    // rotella laterale), ferma una pipeline eventualmente rimasta attiva —
+    // altrimenti resterebbe orfana, dato che quell'evento non passa da
+    // /api/hide. Solo quando cambia davvero, per non richiamare lo stop ad
+    // ogni riporto ripetuto dello stesso stato.
+    if (changed) {
+        findCameraElements(newState).then((cams) => {
+            if (!cams.length) stopCameraOnController().catch((e) => console.log("[c100x-dashboard] CAMERA stop errore:", e.message));
+        }).catch(() => { /* se la scheda non esiste nemmeno, nessuna camera da fermare */ });
+    }
 });
 
 app.get("/api/scheda-state", (req, res) => { res.json({ state: lastSchedaShown }); });
@@ -498,6 +614,16 @@ app.post("/api/show", async (req, res) => {
     a.duration = Math.max(0, parseInt(b.duration || 0) || 0);
     await writeActive(a);
     res.json({ ok: true, showSeq: a.showSeq });
+
+    // Camera: se la scheda mostrata ha un elemento camera, avvia la pipeline sul
+    // controller. Se NON ce l'ha, ferma una pipeline eventualmente rimasta
+    // attiva da una scheda precedente (passaggio diretto fra schede, senza un
+    // "nascondi" esplicito in mezzo — altrimenti resterebbe orfana).
+    // Best-effort: non blocca la risposta ne' fallisce lo show.
+    findCameraElements(a.name).then((cams) => {
+        if (cams.length) maybeStartCameraForLayout(a.name).catch((e) => console.log("[c100x-dashboard] CAMERA errore:", e.message));
+        else stopCameraOnController().catch((e) => console.log("[c100x-dashboard] CAMERA stop errore:", e.message));
+    }).catch((e) => console.log("[c100x-dashboard] CAMERA errore lettura scheda:", e.message));
 });
 
 // Nasconde la scheda (es. quando torna la corrente)
@@ -506,7 +632,130 @@ app.post("/api/hide", async (req, res) => {
     a.hideSeq = Date.now();
     await writeActive(a);
     res.json({ ok: true, hideSeq: a.hideSeq });
+
+    // Ferma sempre la pipeline camera (no-op innocuo se non ne stava girando una).
+    stopCameraOnController().catch((e) => console.log("[c100x-dashboard] CAMERA stop errore:", e.message));
 });
+
+async function findCameraElements(layoutName) {
+    if (!layoutName || !safeName(layoutName)) return [];
+    try {
+        const raw = await fsp.readFile(layoutPath(layoutName), "utf8");
+        const layout = JSON.parse(raw);
+        return (layout.elements || []).filter((e) => e.type === "camera");
+    } catch (e) { return []; }
+}
+
+// Il token dell'entita' (access_token) ruota ogni ~5 minuti lato HA — con la
+// pipeline diretta (niente relay di mezzo) il citofono legge da HA per tutta
+// la durata della visualizzazione, quindi serve rinfrescare periodicamente
+// prima che scada, invece di aspettare che la pipeline si blocchi da sola.
+// Una voce per ogni telecamera attiva (indicizzata per id elemento), non piu'
+// un singolo timer globale — piu' telecamere possono essere attive insieme.
+const TOKEN_REFRESH_INTERVAL_MS = 4 * 60 * 1000; // sotto i 5 minuti di rotazione
+const cameraRefreshTimers = new Map(); // id -> { timer, host, entity, x, y, w, h }
+
+async function maybeStartCameraForLayout(layoutName) {
+    console.log("[c100x-dashboard] CAMERA maybeStart per layout:", layoutName);
+    const cams = await findCameraElements(layoutName);
+    if (!cams.length) { console.log("[c100x-dashboard] CAMERA nessun elemento camera in questa scheda"); return; }
+    console.log("[c100x-dashboard] CAMERA elementi trovati:", cams.length);
+    const c = await readCfg();
+    const host = (c.host || "").trim();
+    if (!host) throw new Error("host del citofono non configurato");
+
+    stopAllCameraRefreshTimers();
+
+    // Ogni telecamera e' indipendente: un errore su una non deve bloccare le
+    // altre — le avviamo tutte, raccogliendo eventuali errori separatamente.
+    const results = await Promise.allSettled(cams.map((cam) => startOneCamera(cam, host)));
+    results.forEach((r, i) => {
+        if (r.status === "rejected") console.log(`[c100x-dashboard] CAMERA errore (${cams[i].id}):`, r.reason.message);
+    });
+}
+
+async function startOneCamera(cam, host) {
+    console.log("[c100x-dashboard] CAMERA elemento:", JSON.stringify(cam));
+    let streamUrl, mode, insertAud;
+
+    if (cam.sourceType === "url") {
+        streamUrl = (cam.url || "").trim();
+        if (!streamUrl) throw new Error("nessun URL impostato per l'elemento camera");
+        // Rileva il codec automaticamente invece di assumere sempre H.264:
+        // un URL diretto puo' essere MJPEG (es. una webcam economica) tanto
+        // quanto H.264 (es. una vera telecamera IP) — stesso approccio
+        // universale usato per le entita' HA.
+        const check = await checkCameraCompatibility(streamUrl);
+        if (!check.ok) throw new Error(check.error || "sorgente non raggiungibile");
+        if (check.codec === "mjpeg") { mode = "mjpeg"; insertAud = "false"; }
+        else if (check.codec === "h264") { mode = "h264"; insertAud = "true"; }
+        else throw new Error(`codec "${check.codec}" non supportato (solo H.264 o MJPEG)`);
+    } else {
+        if (!cam.entity) throw new Error("nessuna entita' impostata per l'elemento camera");
+
+        // camera_proxy_stream: la STESSA cosa che usa il frontend di Lovelace
+        // per davvero (verificato negli strumenti sviluppatore del browser) —
+        // un flusso MJPEG continuo, autenticato con il token dell'entita'
+        // stessa passato come query string. Il citofono lo legge DIRETTAMENTE
+        // (niente relay, niente add-on di mezzo, niente H.264): un solo
+        // passaggio di decodifica (JPEG) invece di tre, risultato universale
+        // per qualunque camera.* dato che questo endpoint da' sempre MJPEG a
+        // prescindere dal codec nativo della telecamera.
+        console.log("[c100x-dashboard] CAMERA leggo il token dell'entita':", cam.entity);
+        streamUrl = await getCameraProxyStreamUrl(cam.entity);
+        console.log("[c100x-dashboard] CAMERA sorgente (camera_proxy_stream):", streamUrl);
+        mode = "mjpeg";
+        insertAud = "false";
+
+        startCameraRefreshTimer(cam.id, { host, entity: cam.entity, x: Math.round(cam.x || 0), y: Math.round(cam.y || 0), w: Math.round(cam.w || 10), h: Math.round(cam.h || 10) });
+    }
+
+    console.log("[c100x-dashboard] CAMERA avvio pipeline sul controller, id:", cam.id, "modalita':", mode, "coords:", cam.x, cam.y, cam.w, cam.h);
+    const r = await controllerFetch(host, "camera-stream", {
+        start: "true", id: cam.id,
+        url: encodeURIComponent(streamUrl),
+        x: Math.round(cam.x || 0), y: Math.round(cam.y || 0),
+        w: Math.round(cam.w || 10), h: Math.round(cam.h || 10),
+        mode, insertaud: insertAud
+    });
+    console.log("[c100x-dashboard] CAMERA risposta controller:", JSON.stringify(r));
+}
+
+function startCameraRefreshTimer(id, state) {
+    stopCameraRefreshTimer(id);
+    const timer = setInterval(async () => {
+        try {
+            const freshUrl = await getCameraProxyStreamUrl(state.entity);
+            console.log("[c100x-dashboard] CAMERA rinnovo token (id:", id, "), riavvio pipeline");
+            await controllerFetch(state.host, "camera-stream", {
+                start: "true", id,
+                url: encodeURIComponent(freshUrl),
+                x: state.x, y: state.y, w: state.w, h: state.h, mode: "mjpeg", insertaud: "false"
+            });
+        } catch (e) {
+            console.log("[c100x-dashboard] CAMERA rinnovo token fallito (id:", id, "):", e.message);
+        }
+    }, TOKEN_REFRESH_INTERVAL_MS);
+    cameraRefreshTimers.set(id, timer);
+}
+
+function stopCameraRefreshTimer(id) {
+    const timer = cameraRefreshTimers.get(id);
+    if (timer) clearInterval(timer);
+    cameraRefreshTimers.delete(id);
+}
+
+function stopAllCameraRefreshTimers() {
+    for (const id of [...cameraRefreshTimers.keys()]) stopCameraRefreshTimer(id);
+}
+
+async function stopCameraOnController() {
+    stopAllCameraRefreshTimers();
+    const c = await readCfg();
+    const host = (c.host || "").trim();
+    if (!host) return;
+    await controllerFetch(host, "camera-stream", { stop: "true" }); // senza "id": ferma tutte le pipeline attive
+}
 
 // --- Endpoint per il citofono ---
 let lastPoll = 0;
@@ -696,6 +945,7 @@ app.get("/api/citofono/settings", async (req, res) => {
         host: c.host || "", port: c.port || 22, username: c.username || "root",
         addonBase: c.addonBase || "", nodePath: c.nodePath || DEFAULT_NODE,
         savePassword: !!c.savePassword, hasPassword: !!c.password,
+        haUrl: c.haUrl || "",
         sshAvailable: !!SSHClient
     });
 });
@@ -709,6 +959,7 @@ app.post("/api/citofono/settings", async (req, res) => {
     c.addonBase = (b.addonBase || "").trim();
     c.nodePath = (b.nodePath || "").trim() || DEFAULT_NODE;
     c.savePassword = !!b.savePassword;
+    c.haUrl = (b.haUrl || "").trim().replace(/\/+$/, "");
     if (c.savePassword) { if (b.password) c.password = b.password; }
     else { delete c.password; }
     await writeCfg(c);
@@ -731,7 +982,7 @@ app.post("/api/citofono/install", async (req, res) => {
     if (!/^https?:\/\/[A-Za-z0-9._-]+(:\d+)?$/.test(addonBase)) return res.status(400).json({ ok: false, error: "URL add-on non valido (es. http://192.168.1.10:8099)" });
     if (!/^[A-Za-z0-9._/-]+$/.test(nodePath)) return res.status(400).json({ ok: false, error: "percorso node non valido" });
 
-    let qml, patch, vncScript, controllerBundle, mainPagePatch, ptraceInject;
+    let qml, patch, vncScript, controllerBundle, mainPagePatch, ptraceInject, ffmpegBin, vpuDecodeBin, fbBlitBin;
     try {
         qml = fs.readFileSync(path.join(CITOFONO_DIR, "SchedaPage.qml"), "utf8");
         patch = fs.readFileSync(path.join(CITOFONO_DIR, "patch-scheda-qml.js"), "utf8");
@@ -739,6 +990,9 @@ app.post("/api/citofono/install", async (req, res) => {
         controllerBundle = fs.readFileSync(path.join(CITOFONO_DIR, "controller-bundle-webrtc.js"), "utf8");
         mainPagePatch = fs.readFileSync(path.join(CITOFONO_DIR, "patch-mainpage-qml.js"), "utf8");
         ptraceInject = fs.readFileSync(path.join(CITOFONO_DIR, "ptrace-inject-armhf")); // binario: niente "utf8", Buffer grezzo
+        ffmpegBin = fs.readFileSync(path.join(CITOFONO_DIR, "ffmpeg-armhf")); // binario, per l'elemento telecamera
+        vpuDecodeBin = fs.readFileSync(path.join(CITOFONO_DIR, "vpu-fb-decode-armhf")); // binario, decodifica hardware H.264 (URL diretti gia' compatibili)
+        fbBlitBin = fs.readFileSync(path.join(CITOFONO_DIR, "fb-blit-armhf")); // binario, disegna pixel grezzi MJPEG (modalita' principale, universale)
     } catch (e) { return res.status(500).json({ ok: false, error: "file QML/patch non trovati: " + e.message }); }
 
     const log = [];
@@ -806,6 +1060,16 @@ app.post("/api/citofono/install", async (req, res) => {
         if (rpi.errout) log.push("stderr: " + rpi.errout.trim());
         if (rpi.out.indexOf("DONE_PTRACE") < 0)
             log.push("ATTENZIONE: l'iniettore ptrace potrebbe non essere stato installato correttamente.");
+
+        log.push("Caricamento di ffmpeg e dei decoder (per l'elemento telecamera)…");
+        await sshExec(conn, "cat > /home/bticino/cfg/extra/ffmpeg-armhf", ffmpegBin);
+        await sshExec(conn, "cat > /home/bticino/cfg/extra/vpu-fb-decode-armhf", vpuDecodeBin);
+        await sshExec(conn, "cat > /home/bticino/cfg/extra/fb-blit-armhf", fbBlitBin);
+        const rcam = await sshExec(conn, "chmod +x /home/bticino/cfg/extra/ffmpeg-armhf /home/bticino/cfg/extra/vpu-fb-decode-armhf /home/bticino/cfg/extra/fb-blit-armhf && echo DONE_CAMERA");
+        if (rcam.out) log.push(rcam.out.trim());
+        if (rcam.errout) log.push("stderr: " + rcam.errout.trim());
+        if (rcam.out.indexOf("DONE_CAMERA") < 0)
+            log.push("ATTENZIONE: ffmpeg/decoder potrebbero non essere stati installati correttamente — l'elemento telecamera non funzionera'.");
 
         if (reboot) {
             // Il comando DEVE sopravvivere alla chiusura della sessione SSH: senza
@@ -983,6 +1247,37 @@ async function pollBacklightOnce() {
 }
 pollBacklightOnce();
 setInterval(pollBacklightOnce, 1500);
+
+// DIAGNOSTICA TEMPORANEA: legge il log di ffmpeg e l'elenco dei file prodotti
+// dal relay — il container dell'add-on non e' raggiungibile via SSH come il
+// citofono, serve un modo per guardarci dentro dal browser. Da rimuovere una
+// volta capito il problema.
+// DIAGNOSTICA TEMPORANEA: elenca eventuali processi ffmpeg rimasti appesi da
+// test precedenti (letto direttamente da /proc, senza bisogno del binario
+// "ps" che potrebbe non essere installato) e il carico di sistema. Da
+// rimuovere una volta capito il problema.
+app.get("/api/debug-processes", (req, res) => {
+    let out = "";
+    try { out += "=== /proc/loadavg ===\n" + fs.readFileSync("/proc/loadavg", "utf8") + "\n"; } catch (e) { out += "loadavg non disponibile: " + e.message + "\n"; }
+    out += "\n=== processi con 'ffmpeg' nella cmdline ===\n";
+    try {
+        const pids = fs.readdirSync("/proc").filter((p) => /^\d+$/.test(p));
+        let found = 0;
+        for (const pid of pids) {
+            try {
+                const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, "utf8").replace(/\0/g, " ").trim();
+                if (cmdline.includes("ffmpeg")) {
+                    found++;
+                    let stat = "";
+                    try { stat = fs.readFileSync(`/proc/${pid}/stat`, "utf8").trim(); } catch (e) {}
+                    out += `PID ${pid}: ${cmdline}\n`;
+                }
+            } catch (e) { /* processo sparito nel frattempo, ignora */ }
+        }
+        if (!found) out += "(nessuno)\n";
+    } catch (e) { out += "errore lettura /proc: " + e.message + "\n"; }
+    res.type("text/plain").send(out);
+});
 
 app.get("/api/backlight-state", (req, res) => {
     res.json({ on: backlightOn });

@@ -119,6 +119,17 @@ button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .el-text { display: flex; align-items: flex-start; white-space: pre-wrap; word-break: break-word; line-height: 1.15; font-family: "Roboto", var(--sans); }
 .el-img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .el-shape { width: 100%; height: 100%; }
+.el-camera-ph {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem;
+  background: repeating-linear-gradient(45deg, #1a1a1a, #1a1a1a 10px, #222 10px, #222 20px);
+  border: 2px dashed #666;
+  border-radius: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.el-camera-ph-ico { width: 32px; height: 32px; opacity: .7; }
+.el-camera-ph-label { color: #aaa; font-size: .75rem; max-width: 90%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .handle {
   position: absolute; right: -5px; bottom: -5px; width: 12px; height: 12px;

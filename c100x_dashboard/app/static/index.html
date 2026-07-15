@@ -30,7 +30,10 @@
     <button id="btnSetActive" data-i18n-title="t_set_active" data-i18n="set_active">Imposta attiva</button>
     <input id="showDur" type="number" min="0" max="600" value="0" data-i18n-title="t_duration" style="width:64px">
     <button id="btnShow" class="accent" data-i18n-title="t_show_now" data-i18n="show_now">Mostra ora</button>
-    <button id="btnCito" data-i18n-title="t_intercom" data-i18n="intercom">Citofono</button>
+    <span style="position:relative;display:inline-block">
+      <button id="btnCito" data-i18n-title="t_intercom" data-i18n="intercom">Citofono</button>
+      <span id="citoUpdateDot" title="Aggiornamento disponibile" style="display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#f2a93b;border:1.5px solid var(--bg,#1a1a1a);pointer-events:none"></span>
+    </span>
     <button id="btnLive" data-i18n-title="t_live" data-i18n="live">Live</button>
     <select id="langSel" title="Language"><option value="it">IT</option><option value="en">EN</option></select>
   </div>
@@ -50,6 +53,7 @@
     <button data-add="triangle"><span class="pal-ico" data-ico="triangle"></span><span data-i18n="el_triangle">Triangolo</span></button>
     <button data-add="line"><span class="pal-ico" data-ico="line"></span><span data-i18n="el_line">Linea</span></button>
     <button data-add="arrow"><span class="pal-ico" data-ico="arrow"></span><span data-i18n="el_arrow">Freccia</span></button>
+    <button data-add="camera"><span class="pal-ico" data-ico="camera"></span><span data-i18n="el_camera">Telecamera</span></button>
 
     <h2 data-i18n="background">Sfondo</h2>
     <label class="row"><span data-i18n="color">Colore</span>
@@ -169,6 +173,8 @@
     <div class="field"><label data-i18n="m_pass">Password</label><input id="cf_pass" type="password" autocomplete="new-password"></div>
     <div class="toggle-row"><label><input id="cf_save" type="checkbox"> <span data-i18n="m_savepass">Salva la password nell'add-on</span></label></div>
     <div class="field"><label data-i18n="m_base">URL dell'add-on (come lo vede il citofono)</label><input id="cf_base" type="text" placeholder="http://IP_HA:8099" autocomplete="off"></div>
+    <div class="field"><label data-i18n="m_haurl">URL diretto di Home Assistant (indirizzo LAN, non il proxy del supervisor)</label><input id="cf_haurl" type="text" placeholder="http://IP_HA:8123" autocomplete="off"></div>
+    <p class="hint" style="margin-top:-.3rem" data-i18n="m_haurl_hint">Serve solo per gli elementi telecamera collegati a un'entità camera.* di HA — quell'endpoint specifico non funziona passando dal proxy interno del supervisor.</p>
     <details>
       <summary data-i18n="m_advanced">Avanzate</summary>
       <div class="field"><label data-i18n="m_nodepath">Percorso di node sul citofono</label><input id="cf_node" type="text" value="/home/bticino/cfg/extra/node/bin/node"></div>

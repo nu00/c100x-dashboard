@@ -31,13 +31,21 @@ const I18N = {
     bm_illuminate_note: "Se attivo, il LED del tasto si accende alla pressione. Attenzione: sui tasti con funzione nativa (es. serratura, occhio, o altri a seconda della configurazione) il citofono eseguirà ANCHE la funzione originale.",
     bm_native_note: "Serratura/occhio hanno funzioni native: l'azione HA parte, ma la funzione originale potrebbe attivarsi comunque.",
     bm_saved_hint: "Ricordati di salvare la scheda per applicare le modifiche ai pulsanti.",
-    el_line: "Linea", el_arrow: "Freccia", background: "Sfondo", color: "Colore", grid: "Griglia",
+    el_line: "Linea", el_arrow: "Freccia", el_camera: "Telecamera", background: "Sfondo", color: "Colore", grid: "Griglia",
+    camera_only_one: "Puoi aggiungere una sola telecamera per scheda", camera_source: "Sorgente", camera_source_entity: "Entità camera HA", camera_source_url: "URL diretto",
+    camera_url: "URL stream", camera_url_hint: "Indirizzo HLS o compatibile, es. http://.../stream.m3u8",
+    camera_hint: "Il video viene mostrato a livello di sistema nell'area di questo elemento — non è un vero elemento QML, non supporta rotazione.",
+    camera_size_hint: "Dimensione massima 480×270: oltre, la decodifica non regge il passo col tempo reale su questo hardware (verificato — rischia anche di far riavviare il citofono).",
+    camera_size_limit_hit: "Dimensione massima raggiunta (480×270) — oltre, il citofono non regge il passo col tempo reale.",
+    camera_check: "Verifica sorgente", camera_checking: "Verifica in corso…", camera_check_ok: "Compatibile",
+    camera_check_failed: "Verifica fallita", camera_copy_snippet: "Copia snippet configuration.yaml", camera_copied: "Copiato negli appunti",
     snap: "Aggancia (10px)", palette_hint: "Trascina per spostare, maniglia per ridimensionare. Frecce: sposta (Shift = 10px). PagSu/PagGiù: sopra/sotto. Canc: elimina. Con più elementi selezionati, L/R/E/T/B/M per allineare.",
     properties: "Proprietà", select_element: "Seleziona un elemento sulla tela.",
     m_title: "Citofono — installazione via SSH",
     m_hint: "Carica la pagina sul citofono, applica la patch e riavvia. Richiede SSH attivo sul citofono. Viene salvato un backup di main.qml.",
     m_host: "Host / IP del citofono", m_port: "Porta", m_user: "Utente", m_pass: "Password",
     m_savepass: "Salva la password nell'add-on", m_base: "URL dell'add-on (come lo vede il citofono)",
+    m_haurl: "URL diretto di Home Assistant (indirizzo LAN, non il proxy del supervisor)", m_haurl_hint: "Serve solo per gli elementi telecamera collegati a un'entità camera.* di HA — quell'endpoint specifico non funziona passando dal proxy interno del supervisor.",
     m_advanced: "Avanzate", m_nodepath: "Percorso di node sul citofono", m_reboot: "Riavvia il citofono al termine",
     m_savebtn: "Salva impostazioni", m_install: "Installa / aggiorna sul citofono", m_close: "Chiudi",
     ready: "Pronto.", pos_size: "Posizione e dimensione", rotation_deg: "Rotazione (°)", text: "Testo", entity: "Entità",
@@ -91,13 +99,21 @@ const I18N = {
     bm_illuminate_note: "If enabled, the button LED lights up on press. Warning: on buttons with a native function (e.g. lock, eye, or others depending on configuration) the intercom will ALSO run the original function.",
     bm_native_note: "Lock/eye have native functions: the HA action fires, but the original function may still trigger.",
     bm_saved_hint: "Remember to save the card to apply button changes.",
-    el_line: "Line", el_arrow: "Arrow", background: "Background", color: "Color", grid: "Grid",
+    el_line: "Line", el_arrow: "Arrow", el_camera: "Camera", background: "Background", color: "Color", grid: "Grid",
+    camera_only_one: "You can add only one camera per screen", camera_source: "Source", camera_source_entity: "HA camera entity", camera_source_url: "Direct URL",
+    camera_url: "Stream URL", camera_url_hint: "HLS or compatible address, e.g. http://.../stream.m3u8",
+    camera_hint: "The video is shown at the system level within this element's area — it's not a real QML element, rotation isn't supported.",
+    camera_size_hint: "Max size 480×270: beyond that, decoding can't keep up with real time on this hardware (verified — can even trigger an intercom reboot).",
+    camera_size_limit_hit: "Maximum size reached (480×270) — beyond that, the intercom can't keep up with real time.",
+    camera_check: "Check source", camera_checking: "Checking…", camera_check_ok: "Compatible",
+    camera_check_failed: "Check failed", camera_copy_snippet: "Copy configuration.yaml snippet", camera_copied: "Copied to clipboard",
     snap: "Snap (10px)", palette_hint: "Drag to move, handle to resize. Arrows: move (Shift = 10px). PgUp/PgDn: forward/back. Del: remove. With multiple selected, L/R/E/T/B/M to align.",
     properties: "Properties", select_element: "Select an element on the canvas.",
     m_title: "Intercom — install via SSH",
     m_hint: "Uploads the page to the intercom, patches it and reboots. Requires SSH enabled on the intercom. A backup of main.qml is saved.",
     m_host: "Intercom host / IP", m_port: "Port", m_user: "User", m_pass: "Password",
     m_savepass: "Save the password in the add-on", m_base: "Add-on URL (as the intercom sees it)",
+    m_haurl: "Direct Home Assistant URL (LAN address, not the supervisor proxy)", m_haurl_hint: "Only needed for camera elements linked to a HA camera.* entity — that specific endpoint doesn't work through the supervisor's internal proxy.",
     m_advanced: "Advanced", m_nodepath: "node path on the intercom", m_reboot: "Reboot the intercom when done",
     m_savebtn: "Save settings", m_install: "Install / update on the intercom", m_close: "Close",
     ready: "Ready.", pos_size: "Position and size", rotation_deg: "Rotation (°)", text: "Text", entity: "Entity",
@@ -163,6 +179,12 @@ function applyStaticI18n() {
 }
 
 const SCREEN_W = 800, SCREEN_H = 480;
+// Limite dimensione elemento camera: verificato empiricamente il punto di
+// equilibrio sostenibile per la decodifica hardware + disegno su questo
+// hardware (oltre, il ciclo di disegno non tiene il passo col tempo reale,
+// causando rallentamento progressivo — verificato anche fino a rischiare il
+// riavvio del sistema per watchdog hardware a piena risoluzione 800x480).
+const CAMERA_MAX_W = 480, CAMERA_MAX_H = 270;
 const GRID = 10;
 
 let layout = newLayout();
@@ -190,6 +212,7 @@ function defaultsFor(type) {
     case "triangle": return { ...base, w: 120, h: 120, fill: "#f2a93b" };
     case "line":     return { ...base, w: 240, h: 30, thickness: 6, fill: "#f2a93b" };
     case "arrow":    return { ...base, w: 240, h: 40, thickness: 6, fill: "#f2a93b" };
+    case "camera":   return { ...base, sourceType: "entity", entity: "", url: "", w: CAMERA_MAX_W, h: CAMERA_MAX_H };
   }
   return base;
 }
@@ -329,6 +352,13 @@ function paintVisual(d, el) {
   } else if (el.type === "icon" || el.type === "entity-icon") {
     const icoColor = (el.type === "entity-icon" || el.type === "icon") ? (el._previewColor || el.color) : el.color;
     if (el.icon) { const img = document.createElement("img"); img.className = "el-img"; img.src = iconUrl(el.icon, icoColor); d.appendChild(img); } else d.appendChild(ph(t(el.type === "entity-icon" ? "el_entity_icon" : "el_icon")));
+  } else if (el.type === "camera") {
+    const box = document.createElement("div"); box.className = "el-camera-ph";
+    const img = document.createElement("img"); img.className = "el-camera-ph-ico"; img.src = iconUrl("camera", "#888888"); box.appendChild(img);
+    const label = document.createElement("div"); label.className = "el-camera-ph-label";
+    label.textContent = (el.sourceType === "url") ? (el.url || t("camera_source_url")) : (el.entity || t("camera_source_entity"));
+    box.appendChild(label);
+    d.appendChild(box);
   } else if (el.type === "rect" || el.type === "circle" || el.type === "triangle") {
     const s = document.createElement("div"); s.className = "el-shape"; s.style.background = el.fill;
     if (el.type === "circle") s.style.borderRadius = "50%";
@@ -459,6 +489,7 @@ function onElementPointerDown(e, el, node, handle, rotHandle) {
   const xT = [], yT = [];
   if (mode === "move" && !multi) buildTargets(el, xT, yT);
   let raf = 0, pending = null;
+  let cameraLimitWarned = false;
   node.classList.add("dragging");
 
   function apply() {
@@ -474,7 +505,14 @@ function onElementPointerDown(e, el, node, handle, rotHandle) {
     }
     const dx = (pending.mx - startMX) / scale, dy = (pending.my - startMY) / scale;
     if (mode === "resize") {
-      el.w = clamp(snap(start.w + dx), 8, SCREEN_W); el.h = clamp(snap(start.h + dy), 8, SCREEN_H);
+      const maxW = el.type === "camera" ? CAMERA_MAX_W : SCREEN_W;
+      const maxH = el.type === "camera" ? CAMERA_MAX_H : SCREEN_H;
+      const wantedW = snap(start.w + dx), wantedH = snap(start.h + dy);
+      if (el.type === "camera" && !cameraLimitWarned && (wantedW > maxW || wantedH > maxH)) {
+        cameraLimitWarned = true;
+        setStatus(t("camera_size_limit_hit"));
+      }
+      el.w = clamp(wantedW, 8, maxW); el.h = clamp(wantedH, 8, maxH);
       node.style.width = el.w + "px"; node.style.height = el.h + "px";
       return;
     }
@@ -670,7 +708,8 @@ function pasteClipboard() {
     layout.elements.push(c); made.push(c.id);
   }
   selectedIds = new Set(made); selectedId = made[made.length - 1] || null;
-  render(); renderProps(); setStatus(t("pasted", made.length));
+  render(); renderProps();
+  setStatus(t("pasted", made.length));
 }
 
 function field(label, inputHtml) { return `<div class="field"><label>${label}</label>${inputHtml}</div>`; }
@@ -683,7 +722,7 @@ function renderProps() {
   let html = `<div class="field"><label>${t("pos_size")}</label>
     <div class="row-2"><input id="p_x" type="number" value="${el.x}" title="X"><input id="p_y" type="number" value="${el.y}" title="Y"></div>
     <div class="row-2" style="margin-top:.4rem"><input id="p_w" type="number" value="${el.w}" title="W"><input id="p_h" type="number" value="${el.h}" title="H"></div></div>`;
-  html += field(t("rotation_deg"), `<input id="p_rot" type="number" min="-180" max="180" value="${el.rotation || 0}">`);
+  if (el.type !== "camera") html += field(t("rotation_deg"), `<input id="p_rot" type="number" min="-180" max="180" value="${el.rotation || 0}">`);
 
   if (el.type === "text") {
     html += field(t("text"), `<textarea id="p_text">${escapeHtml(el.text)}</textarea>`) + textStyleFields(el);
@@ -727,6 +766,23 @@ function renderProps() {
     html += field(t("icon"), `<div class="ta-wrap"><input id="p_icon" type="text" placeholder="${t("ph_icon")}" value="${escapeHtml(el.icon)}" autocomplete="off"></div>`);
     html += field(t("color"), `<input id="p_color2" type="color" value="${el.color}">`);
     html += condColorFields(el);
+  } else if (el.type === "camera") {
+    const st = el.sourceType || "entity";
+    html += `<div class="field"><label>${t("camera_source")}</label>
+      <div class="row-2">
+        <label class="row checkbox"><input type="radio" name="p_camsrc" value="entity" ${st === "entity" ? "checked" : ""}> ${t("camera_source_entity")}</label>
+        <label class="row checkbox"><input type="radio" name="p_camsrc" value="url" ${st === "url" ? "checked" : ""}> ${t("camera_source_url")}</label>
+      </div></div>`;
+    if (st === "url") {
+      html += field(t("camera_url"), `<input id="p_cam_url" type="text" placeholder="http://.../stream.m3u8" value="${escapeHtml(el.url || "")}" autocomplete="off">`);
+      html += `<p class="hint" style="margin-top:-.3rem">${t("camera_url_hint")}</p>`;
+    } else {
+      html += field(t("entity"), `<div class="ta-wrap"><input id="p_cam_entity" type="text" placeholder="camera.xxx" value="${escapeHtml(el.entity || "")}" autocomplete="off"></div>`);
+    }
+    html += `<button id="p_cam_check" style="width:100%;margin:.3rem 0">${t("camera_check")}</button>`;
+    html += `<div id="p_cam_result"></div>`;
+    html += `<p class="hint">${t("camera_hint")}</p>
+    <p class="hint">${t("camera_size_hint")}</p>`;
   } else if (el.type === "rect" || el.type === "circle" || el.type === "triangle") {
     html += field(t("color"), `<input id="p_fill" type="color" value="${el.fill}">`);
   } else if (el.type === "line" || el.type === "arrow") {
@@ -775,8 +831,16 @@ function wireProps(el) {
   const bind = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener("input", () => { fn(e); refreshSelectedNode(); }); };
   bind("p_x", e => el.x = clamp(parseInt(e.value) || 0, 0, SCREEN_W - el.w));
   bind("p_y", e => el.y = clamp(parseInt(e.value) || 0, 0, SCREEN_H - el.h));
-  bind("p_w", e => el.w = clamp(parseInt(e.value) || 8, 8, SCREEN_W));
-  bind("p_h", e => el.h = clamp(parseInt(e.value) || 8, 8, SCREEN_H));
+  bind("p_w", e => {
+    const v = parseInt(e.value) || 8;
+    if (el.type === "camera" && v > CAMERA_MAX_W) setStatus(t("camera_size_limit_hit"));
+    el.w = clamp(v, 8, el.type === "camera" ? CAMERA_MAX_W : SCREEN_W);
+  });
+  bind("p_h", e => {
+    const v = parseInt(e.value) || 8;
+    if (el.type === "camera" && v > CAMERA_MAX_H) setStatus(t("camera_size_limit_hit"));
+    el.h = clamp(v, 8, el.type === "camera" ? CAMERA_MAX_H : SCREEN_H);
+  });
   bind("p_rot", e => { el.rotation = clamp(parseInt(e.value) || 0, -180, 180); clampToBounds(el, nodeById(el.id)); });
   bind("p_text", e => el.text = e.value);
   bind("p_prefix", e => el.prefix = e.value);
@@ -850,6 +914,37 @@ function wireProps(el) {
   if (file) file.addEventListener("change", () => uploadImage(file.files[0], el));
   const gal = document.getElementById("p_gallery");
   if (gal) gal.addEventListener("click", () => toggleGallery(el));
+
+  document.querySelectorAll('input[name="p_camsrc"]').forEach(r => {
+    r.addEventListener("change", () => { if (r.checked) { el.sourceType = r.value; renderProps(); } });
+  });
+  const camUrl = document.getElementById("p_cam_url");
+  if (camUrl) camUrl.addEventListener("input", () => { el.url = camUrl.value; });
+  const camEntity = document.getElementById("p_cam_entity");
+  if (camEntity) attachTypeahead(camEntity, q => suggestEntities(q, "camera"), val => { el.entity = val; setStatus(t("set_entity", val)); });
+  const camCheck = document.getElementById("p_cam_check");
+  if (camCheck) camCheck.addEventListener("click", async () => {
+    const resBox = document.getElementById("p_cam_result");
+    resBox.innerHTML = `<p class="hint">${t("camera_checking")}</p>`;
+    try {
+      const r = await fetch("api/camera-check", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceType: el.sourceType || "entity", entity: el.entity, url: el.url })
+      });
+      const d = await r.json();
+      if (d.warning) {
+        const color = d.ok ? "#4caf50" : "#f2a93b"; // verde se comunque ok (serve solo ricodifica), arancio se davvero incompatibile
+        resBox.innerHTML = `<div class="prop-preview" style="color:${color};white-space:pre-wrap">${escapeHtml(d.warning)}</div>`;
+      } else if (d.ok) {
+        const suffix = d.codec ? ` (${d.codec})` : "";
+        resBox.innerHTML = `<div class="prop-preview" style="color:#4caf50">✓ ${t("camera_check_ok")}${suffix}</div>`;
+      } else {
+        resBox.innerHTML = `<div class="prop-preview" style="color:#f44336">${escapeHtml(d.error || t("camera_check_failed"))}</div>`;
+      }
+    } catch (e) {
+      resBox.innerHTML = `<div class="prop-preview" style="color:#f44336">${escapeHtml(e.message)}</div>`;
+    }
+  });
 }
 
 function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -886,9 +981,11 @@ function attachTypeahead(input, suggestFn, onPick) {
   input.addEventListener("blur", () => setTimeout(close, 150));
 }
 
-function suggestEntities(q) {
+function suggestEntities(q, domainFilter) {
   q = q.toLowerCase();
-  const f = q ? ENTITIES.filter(e => e.id.toLowerCase().includes(q) || (e.name || "").toLowerCase().includes(q)) : ENTITIES;
+  let pool = ENTITIES;
+  if (domainFilter) pool = pool.filter(e => e.id.split(".")[0] === domainFilter);
+  const f = q ? pool.filter(e => e.id.toLowerCase().includes(q) || (e.name || "").toLowerCase().includes(q)) : pool;
   return f.slice(0, 30).map(e => ({ value: e.id, label: e.name }));
 }
 // Suggerimenti servizi HA: cerca sia per id completo (es. "fan.toggle") sia per
@@ -1080,8 +1177,18 @@ async function loadLayoutByName(name) {
   if (!layout.elements) layout.elements = [];
   if (!layout.background) layout.background = "#000000";
   if (!layout.buttons) layout.buttons = {};
+  // Corregge eventuali elementi camera salvati prima dell'introduzione del
+  // limite di dimensione (o con un limite precedente piu' permissivo).
+  let clampedAny = false;
+  for (const e of layout.elements) {
+    if (e.type === "camera" && (e.w > CAMERA_MAX_W || e.h > CAMERA_MAX_H)) {
+      e.w = Math.min(e.w, CAMERA_MAX_W); e.h = Math.min(e.h, CAMERA_MAX_H);
+      clampedAny = true;
+    }
+  }
   layoutNameInput.value = layout.name || name; if (layoutList) layoutList.value = name;
-  selectedIds.clear(); selectedId = null; render(); renderProps(); setStatus(t("loaded", name));
+  selectedIds.clear(); selectedId = null; render(); renderProps();
+  setStatus(clampedAny ? t("camera_size_limit_hit") : t("loaded", name));
   savedSnapshot = serializeLayout();
   // Aggiorna tutti gli elementi dinamici allo stato attuale, poi riallinea lo snapshot
   // (i valori/icone calcolati non devono contare come "modifica non salvata"):
@@ -1139,7 +1246,8 @@ function openCito() {
     document.getElementById("cf_port").value = c.port || 22;
     document.getElementById("cf_user").value = c.username || "root";
     document.getElementById("cf_base").value = c.addonBase || "";
-    document.getElementById("cf_node").value = c.nodePath || "/home/bticino/cfg/extra/node/bin/node";
+    document.getElementById("cf_haurl").value = c.haUrl || "";
+        document.getElementById("cf_node").value = c.nodePath || "/home/bticino/cfg/extra/node/bin/node";
     document.getElementById("cf_save").checked = !!c.savePassword;
     document.getElementById("cf_pass").placeholder = c.hasPassword ? t("ph_pass_saved") : t("ph_pass");
     const log = document.getElementById("cf_log"); log.hidden = true; log.textContent = "";
@@ -1157,6 +1265,7 @@ function citoBody() {
     username: document.getElementById("cf_user").value.trim(),
     password: document.getElementById("cf_pass").value,
     addonBase: document.getElementById("cf_base").value.trim(),
+    haUrl: document.getElementById("cf_haurl").value.trim().replace(/\/+$/, ""),
     nodePath: document.getElementById("cf_node").value.trim(),
     savePassword: document.getElementById("cf_save").checked,
     reboot: document.getElementById("cf_reboot").checked
@@ -1165,6 +1274,22 @@ function citoBody() {
 document.getElementById("btnCito").addEventListener("click", openCito);
 document.getElementById("cf_close").addEventListener("click", closeCito);
 citoModal.addEventListener("click", (e) => { if (e.target === citoModal) closeCito(); });
+
+// Pallino sul pulsante "Citofono": segnala che c'e' un aggiornamento del
+// renderer da installare (stato "legacy" o "outdated"), senza dover aprire
+// il pannello per scoprirlo.
+async function pollCitoUpdateDot() {
+  const dot = document.getElementById("citoUpdateDot");
+  if (!dot) return;
+  try {
+    const r = await fetch("api/citofono/status");
+    if (!r.ok) return;
+    const d = await r.json();
+    dot.style.display = d.stale ? "" : "none";
+  } catch (e) { /* silenzioso: non e' critico, riprova al prossimo giro */ }
+}
+pollCitoUpdateDot();
+setInterval(pollCitoUpdateDot, 30000);
 document.getElementById("cf_savebtn").addEventListener("click", async () => {
   const r = await fetch("api/citofono/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(citoBody()) });
   setCitoLog(r.ok ? t("m_log_saved") : t("m_log_save_error"));
@@ -1422,7 +1547,7 @@ function boot() {
 
 
 /* ===================== funzioni aggiuntive ===================== */
-const ICONS = {"text": "M18.5,4L19.66,8.35L18.7,8.61C18.25,7.74 17.79,6.87 17.26,6.43C16.73,6 16.11,6 15.5,6H13V16.5C13,17 13,17.5 13.33,17.75C13.67,18 14.33,18 15,18V19H9V18C9.67,18 10.33,18 10.67,17.75C11,17.5 11,17 11,16.5V6H8.5C7.89,6 7.27,6 6.74,6.43C6.21,6.87 5.75,7.74 5.3,8.61L4.34,8.35L5.5,4H18.5Z", "entity": "M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,14.4 19,16.5 17.3,18C15.9,16.7 14,16 12,16C10,16 8.2,16.7 6.7,18C5,16.5 4,14.4 4,12A8,8 0 0,1 12,4M14,5.89C13.62,5.9 13.26,6.15 13.1,6.54L11.81,9.77L11.71,10C11,10.13 10.41,10.6 10.14,11.26C9.73,12.29 10.23,13.45 11.26,13.86C12.29,14.27 13.45,13.77 13.86,12.74C14.12,12.08 14,11.32 13.57,10.76L13.67,10.5L14.96,7.29L14.97,7.26C15.17,6.75 14.92,6.17 14.41,5.96C14.28,5.91 14.15,5.89 14,5.89M10,6A1,1 0 0,0 9,7A1,1 0 0,0 10,8A1,1 0 0,0 11,7A1,1 0 0,0 10,6M7,9A1,1 0 0,0 6,10A1,1 0 0,0 7,11A1,1 0 0,0 8,10A1,1 0 0,0 7,9M17,9A1,1 0 0,0 16,10A1,1 0 0,0 17,11A1,1 0 0,0 18,10A1,1 0 0,0 17,9Z", "image": "M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z", "icon": "M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z", "rect": "M3,3H21V21H3V3M5,5V19H19V5H5Z", "circle": "M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z", "triangle": "M12,2L1,21H23M12,6L19.53,19H4.47", "line": "M19,13H5V11H19V13Z", "arrow": "M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z", "al": "M4 22H2V2H4V22M22 7H6V10H22V7M16 14H6V17H16V14Z", "ach": "M11 2H13V7H21V10H13V14H18V17H13V22H11V17H6V14H11V10H3V7H11V2Z", "ar": "M20 2H22V22H20V2M2 10H18V7H2V10M8 17H18V14H8V17Z", "at": "M22 2V4H2V2H22M7 22H10V6H7V22M14 16H17V6H14V16Z", "acv": "M22 11H17V6H14V11H10V3H7V11H1.8V13H7V21H10V13H14V18H17V13H22V11Z", "ab": "M22 22H2V20H22V22M10 2H7V18H10V2M17 8H14V18H17V8Z", "adh": "M4 22H2V2H4V22M22 2H20V22H22V2M13.5 7H10.5V17H13.5V7Z", "adv": "M22 2V4H2V2H22M7 10.5V13.5H17V10.5H7M2 20V22H22V20H2Z", "copy": "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z", "home": "M13,3V9H21V3M13,21H21V11H13M3,21H11V15H3M3,13H11V3H3V13Z"};
+const ICONS = {"text": "M18.5,4L19.66,8.35L18.7,8.61C18.25,7.74 17.79,6.87 17.26,6.43C16.73,6 16.11,6 15.5,6H13V16.5C13,17 13,17.5 13.33,17.75C13.67,18 14.33,18 15,18V19H9V18C9.67,18 10.33,18 10.67,17.75C11,17.5 11,17 11,16.5V6H8.5C7.89,6 7.27,6 6.74,6.43C6.21,6.87 5.75,7.74 5.3,8.61L4.34,8.35L5.5,4H18.5Z", "entity": "M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,14.4 19,16.5 17.3,18C15.9,16.7 14,16 12,16C10,16 8.2,16.7 6.7,18C5,16.5 4,14.4 4,12A8,8 0 0,1 12,4M14,5.89C13.62,5.9 13.26,6.15 13.1,6.54L11.81,9.77L11.71,10C11,10.13 10.41,10.6 10.14,11.26C9.73,12.29 10.23,13.45 11.26,13.86C12.29,14.27 13.45,13.77 13.86,12.74C14.12,12.08 14,11.32 13.57,10.76L13.67,10.5L14.96,7.29L14.97,7.26C15.17,6.75 14.92,6.17 14.41,5.96C14.28,5.91 14.15,5.89 14,5.89M10,6A1,1 0 0,0 9,7A1,1 0 0,0 10,8A1,1 0 0,0 11,7A1,1 0 0,0 10,6M7,9A1,1 0 0,0 6,10A1,1 0 0,0 7,11A1,1 0 0,0 8,10A1,1 0 0,0 7,9M17,9A1,1 0 0,0 16,10A1,1 0 0,0 17,11A1,1 0 0,0 18,10A1,1 0 0,0 17,9Z", "image": "M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z", "icon": "M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z", "rect": "M3,3H21V21H3V3M5,5V19H19V5H5Z", "circle": "M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z", "triangle": "M12,2L1,21H23M12,6L19.53,19H4.47", "line": "M19,13H5V11H19V13Z", "arrow": "M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z", "al": "M4 22H2V2H4V22M22 7H6V10H22V7M16 14H6V17H16V14Z", "ach": "M11 2H13V7H21V10H13V14H18V17H13V22H11V17H6V14H11V10H3V7H11V2Z", "ar": "M20 2H22V22H20V2M2 10H18V7H2V10M8 17H18V14H8V17Z", "at": "M22 2V4H2V2H22M7 22H10V6H7V22M14 16H17V6H14V16Z", "acv": "M22 11H17V6H14V11H10V3H7V11H1.8V13H7V21H10V13H14V18H17V13H22V11Z", "ab": "M22 22H2V20H22V22M10 2H7V18H10V2M17 8H14V18H17V8Z", "adh": "M4 22H2V2H4V22M22 2H20V22H22V2M13.5 7H10.5V17H13.5V7Z", "adv": "M22 2V4H2V2H22M7 10.5V13.5H17V10.5H7M2 20V22H22V20H2Z", "copy": "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z", "home": "M13,3V9H21V3M13,21H21V11H13M3,21H11V15H3M3,13H11V3H3V13Z", "camera": "M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"};
 function injectIcons(root) {
   (root || document).querySelectorAll("[data-ico]").forEach(sp => {
     if (sp.firstChild) return;

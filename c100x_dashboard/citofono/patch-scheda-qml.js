@@ -151,6 +151,23 @@ const BLOCK = `
 
 let c = fs.readFileSync(path, "utf8");
 
+// Sfondo della finestra (backgroundImg): di base si nasconde SOLO durante una
+// chiamata reale (callInProgress) — le nostre schede restano trasparenti ma
+// non ottengono mai davvero un fb0 pulito sotto, perche' questo sfondo (un
+// livello a parte, non nello stack di pagine) resta visibile. Estendiamo la
+// stessa condizione aggiungendo "non stiamo mostrando una nostra scheda".
+// Idempotente: se gia' presente, non tocca nulla.
+const BG_OLD = "visible: !vctModel.vct.callInProgress || onlyAudio";
+const BG_NEW = "visible: (!vctModel.vct.callInProgress || onlyAudio) && !schedaWatcher.showing";
+if (c.indexOf(BG_NEW) < 0) {
+    if (c.indexOf(BG_OLD) >= 0) {
+        c = c.replace(BG_OLD, BG_NEW);
+        console.log("Sfondo finestra: aggiunta condizione schedaWatcher.showing.");
+    } else {
+        console.error("ATTENZIONE: binding 'visible' dello sfondo non trovato nella forma attesa — main.qml e' cambiato? Questa patch specifica non e' stata applicata, il resto si'.");
+    }
+}
+
 const i = c.indexOf(BEGIN), j = c.indexOf(END);
 if (i >= 0 && j >= 0) {
     let start = c.lastIndexOf("\n", i); if (start < 0) start = 0;
