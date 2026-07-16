@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.14.0
+
+**🇮🇹 Italiano**
+
+- **Corretto un blocco della retroilluminazione**: a volte lo schermo si spegneva da solo e non si riaccendeva più, né tramite l'entità luce né mostrando una nuova scheda. Trovata la causa reale (indagine passo passo, verificata di persona): il QML riaccende lo schermo solo quando il proprio stato interno passa da "non in mostra" a "in mostra" — se questa transizione restava bloccata (schermo spento senza passare dal nostro "nascondi"), un nuovo "mostra" non bastava. In più, esiste un controllo separato del framebuffer stesso (`blank`, standard del kernel Linux), indipendente dalla retroilluminazione (`brightness`), che può restare bloccato anche quando quest'ultima sembra normale.
+  - "Mostra" ora forza sempre lo sblocco del framebuffer (`blank`), e se necessario replica via software la sequenza "nascondi poi mostra" che risolve il blocco dello stato interno.
+  - L'entità luce ora usa lo stesso meccanismo per accendere/spegnere in modo affidabile.
+- Bump della versione di controllo del renderer sul citofono (per riflettere l'aggiornamento del bundle del controller).
+
+**🇬🇧 English**
+
+- **Fixed a backlight lockup**: sometimes the screen would turn itself off and never come back on, neither via the light entity nor by showing a new screen. Found the real cause (step-by-step investigation, verified in person): the QML only wakes the screen when its own internal state transitions from "not showing" to "showing" — if that transition got stuck (screen off without going through our own "hide"), a new "show" alone wasn't enough. On top of that, there's a separate framebuffer-level control (`blank`, a standard Linux kernel mechanism), independent from the backlight (`brightness`), which can get stuck even when the latter looks normal.
+  - "Show" now always forces the framebuffer unblank, and when needed replicates in software the "hide then show" sequence that resolves the stuck internal state.
+  - The light entity now uses the same mechanism to reliably turn on/off.
+- Bumped the intercom-side renderer control version (reflecting the controller bundle update).
+
 ## 0.13.0
 
 **🇮🇹 Italiano**

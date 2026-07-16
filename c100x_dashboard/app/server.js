@@ -16,10 +16,10 @@ const { spawn } = require("child_process");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.13.0";
+const VERSION = "0.14.0";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "19";
+const RENDERER_VERSION = "20";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -605,6 +605,40 @@ app.get("/api/scheda-state", (req, res) => { res.json({ state: lastSchedaShown }
 
 app.post("/api/show", async (req, res) => {
     const b = req.body || {};
+
+    const c0 = await readCfg();
+    const host0 = (c0.host || "").trim();
+    if (host0) {
+        // Scrittura INCONDIZIONATA di blank=0 su ogni show, non solo quando
+        // "brightness" segnala spento — confermato di persona che
+        // "brightness" da solo non basta per accendere/spegnere lo schermo
+        // (anche se, usato solo per leggere lo stato senza che noi lo
+        // sporchiamo con scritture dirette, resta affidabile). Costa una
+        // sola scrittura sysfs, nessun effetto visibile se gia' acceso.
+        forceBacklightViaSysfs('on');
+
+        // Se INOLTRE "brightness" segnala esplicitamente spento, e' probabile
+        // che anche schedaWatcher.showing sia rimasta bloccata a true in QML
+        // (lo schermo si e' spento senza passare dal nostro "nascondi") — in
+        // quel caso un nuovo showSeq da solo non basta (vedi
+        // patch-scheda-qml.js: la riaccensione scatta solo su transizione
+        // false->true). Replichiamo via software la sequenza che sappiamo
+        // funzionare a mano (tasto non configurato che chiude, poi mostra):
+        // forziamo un hideSeq e diamo tempo al polling di QML (ogni 300ms)
+        // di processarlo, prima di procedere con lo show vero.
+        try {
+            const r = await fetch(`http://${host0}:${CONTROLLER_PORT}/backlight-status?raw=true`, { signal: AbortSignal.timeout(3000) });
+            const d = await r.json();
+            if (d.on === false) {
+                console.log("[c100x-dashboard] SHOW backlight spento, forzo prima un nascondi per resettare schedaWatcher.showing");
+                const a0 = await readActive();
+                a0.hideSeq = Date.now();
+                await writeActive(a0);
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+        } catch (e) { /* stato sconosciuto: procediamo comunque con lo show normale */ }
+    }
+
     const a = await readActive();
     if (b.name) {
         if (!safeName(b.name)) return res.status(400).json({ error: "nome non valido" });
@@ -614,6 +648,12 @@ app.post("/api/show", async (req, res) => {
     a.duration = Math.max(0, parseInt(b.duration || 0) || 0);
     await writeActive(a);
     res.json({ ok: true, showSeq: a.showSeq });
+
+    // Mostrare una scheda dovrebbe sempre anche riaccendere lo schermo se era
+    // spento — riusa lo stesso meccanismo di comando/ripiego di
+    // /api/backlight-command (utile per hiccup piu' semplici, non lo stato
+    // "bloccato" gestito sopra).
+    queueBacklightOn();
 
     // Camera: se la scheda mostrata ha un elemento camera, avvia la pipeline sul
     // controller. Se NON ce l'ha, ferma una pipeline eventualmente rimasta
@@ -1283,9 +1323,33 @@ app.get("/api/backlight-state", (req, res) => {
     res.json({ on: backlightOn });
 });
 
+function forceBacklightViaSysfs(mode) {
+    // Forza sempre "blank" (0=accendi, 4=spegni) direttamente via sysfs sul
+    // controller — confermato di persona essere la leva vera, indipendente
+    // da cosa fa (o non fa) il comando normale via QML. Scrive anche
+    // "brightness" per coerenza, ma NON e' piu' la leva su cui contiamo per
+    // accendere/spegnere (confermato non bastare da sola).
+    readCfg().then((c) => {
+        const host = (c.host || "").trim();
+        if (!host) return;
+        fetch(`http://${host}:${CONTROLLER_PORT}/backlight-status?force=${mode}`, { signal: AbortSignal.timeout(4000) })
+            .catch((e) => console.log("[c100x-dashboard] BACKLIGHT forzatura fallita:", e.message));
+    });
+}
+
+function queueBacklightOn() {
+    backlightQueue.push({ on: true }); // mantiene sincronizzato lo stato interno di Qt (screenState)
+    forceBacklightViaSysfs('on');
+}
+
 app.post("/api/backlight-command", (req, res) => {
     const b = req.body || {};
-    backlightQueue.push({ on: !!b.on });
+    if (b.on) {
+        queueBacklightOn();
+    } else {
+        backlightQueue.push({ on: false });
+        forceBacklightViaSysfs('off');
+    }
     res.json({ ok: true });
 });
 

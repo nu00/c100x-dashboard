@@ -10,6 +10,16 @@ version in `manifest.json`). For add-on news (editor, live view, intercom instal
 
 ---
 
+## 1.4.0
+
+**🇮🇹 Italiano**
+
+- **L'entità di aggiornamento aspetta il riavvio del citofono**: prima si considerava conclusa subito dopo l'invio dei file, mentre il citofono era ancora in fase di riavvio (l'installazione lo riavvia sempre a fine flusso) — rischiando di sovrapporre due installazioni se richiamata di nuovo troppo presto. Ora aspetta (fino a 3 minuti) che il citofono torni online con la versione nuova prima di considerarsi davvero conclusa.
+
+**🇬🇧 English**
+
+- **The update entity now waits for the intercom to reboot**: previously it considered itself done right after sending the files, while the intercom was still rebooting (install always reboots it at the end) — risking overlapping installs if triggered again too soon. It now waits (up to 3 minutes) for the intercom to come back online with the new version before considering itself truly done.
+
 ## 1.3.0
 
 **🇮🇹 Italiano**
