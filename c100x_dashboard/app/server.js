@@ -16,10 +16,10 @@ const { spawn } = require("child_process");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.14.0";
+const VERSION = "0.14.1";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "20";
+const RENDERER_VERSION = "21";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -615,7 +615,7 @@ app.post("/api/show", async (req, res) => {
         // (anche se, usato solo per leggere lo stato senza che noi lo
         // sporchiamo con scritture dirette, resta affidabile). Costa una
         // sola scrittura sysfs, nessun effetto visibile se gia' acceso.
-        forceBacklightViaSysfs('on');
+        forceBacklightViaSysfs('on', lastSetLevel);
 
         // Se INOLTRE "brightness" segnala esplicitamente spento, e' probabile
         // che anche schedaWatcher.showing sia rimasta bloccata a true in QML
@@ -1272,6 +1272,8 @@ app.post("/api/live/button", async (req, res) => {
 // con lo schermo fisicamente spento). Il sysfs riflette sempre lo stato vero,
 // indipendentemente da eventuali intoppi del QML in quel momento.
 let backlightOn = null; // null = non ancora letto
+let backlightLevel = null; // 0-100, null = non ancora letto
+let lastSetLevel = 100; // ultimo livello impostato dall'entita' luce — usato quando "mostra" deve riaccendere, per non perdere una dimmerazione voluta
 let backlightQueue = [];
 
 async function pollBacklightOnce() {
@@ -1283,6 +1285,7 @@ async function pollBacklightOnce() {
         if (!r.ok) return;
         const d = await r.json();
         if (typeof d.on === "boolean") backlightOn = d.on;
+        if (typeof d.level === "number") backlightLevel = d.level;
     } catch (e) { /* non bloccante: manteniamo l'ultimo valore noto finche' non torna a rispondere */ }
 }
 pollBacklightOnce();
@@ -1320,26 +1323,32 @@ app.get("/api/debug-processes", (req, res) => {
 });
 
 app.get("/api/backlight-state", (req, res) => {
-    res.json({ on: backlightOn });
+    res.json({ on: backlightOn, level: backlightLevel });
 });
 
-function forceBacklightViaSysfs(mode) {
+function forceBacklightViaSysfs(mode, level) {
     // Forza sempre "blank" (0=accendi, 4=spegni) direttamente via sysfs sul
     // controller — confermato di persona essere la leva vera, indipendente
     // da cosa fa (o non fa) il comando normale via QML. Scrive anche
-    // "brightness" per coerenza, ma NON e' piu' la leva su cui contiamo per
-    // accendere/spegnere (confermato non bastare da sola).
+    // "brightness" (per intero se acceso, o al livello indicato) per
+    // coerenza, ma "blank" resta la leva su cui contiamo per accendere/
+    // spegnere davvero (confermato: brightness da sola non basta).
     readCfg().then((c) => {
         const host = (c.host || "").trim();
         if (!host) return;
-        fetch(`http://${host}:${CONTROLLER_PORT}/backlight-status?force=${mode}`, { signal: AbortSignal.timeout(4000) })
+        let qs = `force=${mode}`;
+        if (mode === "on" && level !== undefined && level !== null) qs += `&level=${encodeURIComponent(level)}`;
+        fetch(`http://${host}:${CONTROLLER_PORT}/backlight-status?${qs}`, { signal: AbortSignal.timeout(4000) })
             .catch((e) => console.log("[c100x-dashboard] BACKLIGHT forzatura fallita:", e.message));
     });
 }
 
 function queueBacklightOn() {
     backlightQueue.push({ on: true }); // mantiene sincronizzato lo stato interno di Qt (screenState)
-    forceBacklightViaSysfs('on');
+    // Usa l'ultimo livello impostato dall'entita' luce, non sempre il
+    // massimo — altrimenti "mostra" cancellerebbe una dimmerazione voluta
+    // ogni volta che riaccende lo schermo.
+    forceBacklightViaSysfs('on', lastSetLevel);
 }
 
 app.post("/api/backlight-command", (req, res) => {
@@ -1348,6 +1357,24 @@ app.post("/api/backlight-command", (req, res) => {
         queueBacklightOn();
     } else {
         backlightQueue.push({ on: false });
+        forceBacklightViaSysfs('off');
+    }
+    res.json({ ok: true });
+});
+
+// Dedicato all'entita' luce: agisce SOLO sulla retroilluminazione fisica
+// (sysfs, via il controller), MAI tramite il meccanismo a coda che QML
+// consuma — quel meccanismo, quando spegne, chiude la nostra scheda
+// mostrata come effetto collaterale (osservato: "se spengo la
+// retroilluminazione dall'entita' light, muore il nostro QML"). L'entita'
+// luce deve poter accendere/spegnere/dimmerare senza toccare la scheda.
+app.post("/api/backlight-force", (req, res) => {
+    const b = req.body || {};
+    if (b.on) {
+        const level = (b.level !== undefined && b.level !== null) ? Math.max(1, Math.min(100, parseInt(b.level, 10) || 100)) : lastSetLevel;
+        lastSetLevel = level;
+        forceBacklightViaSysfs('on', level);
+    } else {
         forceBacklightViaSysfs('off');
     }
     res.json({ ok: true });

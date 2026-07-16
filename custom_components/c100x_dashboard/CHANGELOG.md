@@ -10,6 +10,18 @@ version in `manifest.json`). For add-on news (editor, live view, intercom instal
 
 ---
 
+## 1.4.1
+
+**🇮🇹 Italiano**
+
+- **Dimmerabile**: l'entità supporta ora la regolazione della luminosità, non solo acceso/spento.
+- **Corretto un effetto collaterale serio**: spegnere la retroilluminazione da questa entità chiudeva la scheda mostrata sul citofono in quel momento. Ora agisce esclusivamente sulla retroilluminazione fisica, senza alcun effetto sulla GUI mostrata.
+
+**🇬🇧 English**
+
+- **Dimmable**: the entity now supports brightness adjustment, not just on/off.
+- **Fixed a serious side effect**: turning off the backlight from this entity closed whatever screen the intercom was showing at the time. It now acts exclusively on the physical backlight, with no effect on the shown GUI.
+
 ## 1.4.0
 
 **🇮🇹 Italiano**

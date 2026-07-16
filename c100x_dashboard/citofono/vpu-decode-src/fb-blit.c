@@ -19,6 +19,10 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <linux/fb.h>
+#include <signal.h>
+
+static volatile sig_atomic_t g_should_stop = 0;
+static void on_stop_signal(int sig) { (void)sig; g_should_stop = 1; }
 
 int main(int argc, char **argv) {
     if (argc != 6) {
@@ -64,16 +68,23 @@ int main(int argc, char **argv) {
     fprintf(stderr, "fb-blit: %s %dx%d bpp=%d stride=%ld — disegno in (%d,%d) %dx%d\n",
             dev, vinfo.xres, vinfo.yres, fb_bpp, stride, x, y, w, h);
 
+    signal(SIGTERM, on_stop_signal);
+    signal(SIGINT, on_stop_signal);
+
     for (;;) {
+        if (g_should_stop) { fprintf(stderr, "fb-blit: segnale di stop ricevuto\n"); break; }
         long got = 0;
+        int eof = 0;
         while (got < frame_bytes) {
             ssize_t n = read(0, frame + got, frame_bytes - got);
             if (n <= 0) {
                 fprintf(stderr, "fb-blit: stdin chiuso o errore di lettura, esco.\n");
-                return 0;
+                eof = 1;
+                break;
             }
             got += n;
         }
+        if (eof) break;
         // Copia riga per riga, rispettando lo stride del framebuffer (che puo'
         // essere piu' largo della nostra finestra) — mai scrivere fuori dal
         // rettangolo assegnato.
@@ -81,6 +92,17 @@ int main(int argc, char **argv) {
             long dst_off = (long)(y + row) * stride + (long)x * 4;
             long src_off = (long)row * w * 4;
             memcpy(fbmem + dst_off, frame + src_off, (long)w * 4);
+        }
+    }
+
+    // Pulisce (nero) il rettangolo prima di uscire — qualunque sia il motivo
+    // (fine stream, segnale di stop) — cosi' non resta l'ultimo fotogramma
+    // congelato a schermo dopo che ci siamo fermati.
+    for (int row = 0; row < h; row++) {
+        long dst_off = (long)(y + row) * stride + (long)x * 4;
+        for (int col = 0; col < w; col++) {
+            unsigned char *px = fbmem + dst_off + (long)col * 4;
+            px[0] = 0; px[1] = 0; px[2] = 0; px[3] = 0xFF;
         }
     }
 

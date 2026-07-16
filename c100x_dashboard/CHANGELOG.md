@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.14.1
+
+**🇮🇹 Italiano**
+
+- **Corretto**: il framebuffer della telecamera (`fb0`) non veniva mai pulito quando si fermava la pipeline — l'ultimo fotogramma restava congelato a schermo. `fb-blit` ora gestisce i segnali di stop e pulisce il proprio rettangolo prima di uscire, come già faceva `vpu-fb-decode` (un'incoerenza tra i due, corretta).
+- **Entità luce dimmerabile**: come richiesto, ora supporta la regolazione della luminosità, non solo acceso/spento.
+- **Corretto un effetto collaterale serio**: spegnere la retroilluminazione dall'entità luce chiudeva la nostra scheda mostrata (passava per lo stesso meccanismo usato da "mostra/nascondi", con effetti indesiderati sullo stato interno del QML). L'entità luce ora usa un percorso dedicato che agisce **solo** sulla retroilluminazione fisica (via sysfs), senza mai toccare QML — accende, spegne e dimmera senza alcun effetto sulla scheda mostrata.
+- "Mostra" ora rispetta l'ultima luminosità impostata dall'entità luce invece di forzare sempre il massimo.
+
+**🇬🇧 English**
+
+- **Fixed**: the camera's framebuffer (`fb0`) was never cleared when the pipeline stopped — the last frame stayed frozen on screen. `fb-blit` now handles stop signals and clears its own rectangle before exiting, matching what `vpu-fb-decode` already did (an inconsistency between the two, now fixed).
+- **Dimmable light entity**: as requested, it now supports brightness adjustment, not just on/off.
+- **Fixed a serious side effect**: turning off the backlight from the light entity closed our shown screen (it went through the same mechanism used by "show/hide", with unwanted effects on the QML's internal state). The light entity now uses a dedicated path that acts **only** on the physical backlight (via sysfs), never touching QML — turns on, off, and dims without any effect on the shown screen.
+- "Show" now respects the last brightness level set by the light entity instead of always forcing full brightness.
+
 ## 0.14.0
 
 **🇮🇹 Italiano**

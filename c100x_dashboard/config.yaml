@@ -2,7 +2,7 @@
 # Documentazione: https://developers.home-assistant.io/docs/add-ons/configuration
 
 name: "C100X Dashboard"
-version: "0.14.0"
+version: "0.14.1"
 slug: "c100x_dashboard"
 description: "Editor e server delle schermate per il display del citofono BTicino C100X"
 url: "https://github.com/nu00/c100x-dashboard"

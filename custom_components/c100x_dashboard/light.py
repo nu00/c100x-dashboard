@@ -27,16 +27,19 @@ async def async_setup_entry(
 class C100xBacklightLight(CoordinatorEntity[C100xBacklightCoordinator], LightEntity):
     """Retroilluminazione del display del citofono.
 
-    Lo stato riflette il valore reale (global.screenState) riportato dal QML,
-    non un'assunzione — se lo schermo si accende/spegne per timeout naturale
-    o per una chiamata in arrivo, l'entità lo segue di conseguenza.
+    Lo stato riflette il valore reale letto direttamente dal sysfs (non lo
+    stato interno di Qt, che puo' disallinearsi dalla realta'). Accensione,
+    spegnimento e luminosita' agiscono SOLO sulla retroilluminazione fisica
+    (blank + brightness via sysfs) — mai tramite un comando a QML, che come
+    effetto collaterale chiuderebbe la scheda eventualmente mostrata in quel
+    momento. Questa entita' esiste per controllare la luce, non la GUI.
     """
 
     _attr_has_entity_name = True
     _attr_name = "Retroilluminazione display"
     _attr_icon = "mdi:monitor"
-    _attr_color_mode = ColorMode.ONOFF
-    _attr_supported_color_modes = {ColorMode.ONOFF}
+    _attr_color_mode = ColorMode.BRIGHTNESS
+    _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
     def __init__(self, coordinator: C100xBacklightCoordinator, entry: ConfigEntry, base_url: str) -> None:
         super().__init__(coordinator)
@@ -51,20 +54,37 @@ class C100xBacklightLight(CoordinatorEntity[C100xBacklightCoordinator], LightEnt
         return data.get("on")
 
     @property
+    def brightness(self) -> int | None:
+        # L'add-on riporta un livello 0-100 (percentuale reale del sysfs);
+        # HA vuole 0-255.
+        data = self.coordinator.data or {}
+        level = data.get("level")
+        if level is None:
+            return None
+        return round(level * 255 / 100)
+
+    @property
     def available(self) -> bool:
         return self.coordinator.last_update_success
 
-    async def _send_command(self, on: bool) -> None:
+    async def _send_command(self, on: bool, level_pct: int | None = None) -> None:
+        payload = {"on": on}
+        if on and level_pct is not None:
+            payload["level"] = level_pct
         try:
             async with self._session.post(
-                f"{self._base}/api/backlight-command", json={"on": on}, timeout=10
+                f"{self._base}/api/backlight-force", json=payload, timeout=10
             ) as resp:
                 resp.raise_for_status()
         except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("Comando retroilluminazione (%s) fallito: %s", on, err)
+            _LOGGER.warning("Comando retroilluminazione (%s) fallito: %s", payload, err)
 
     async def async_turn_on(self, **kwargs) -> None:
-        await self._send_command(True)
+        level_pct = None
+        if "brightness" in kwargs:
+            # HA manda 0-255, l'add-on/sysfs vuole 0-100
+            level_pct = max(1, round(kwargs["brightness"] * 100 / 255))
+        await self._send_command(True, level_pct)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
