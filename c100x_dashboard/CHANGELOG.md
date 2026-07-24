@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.15.0
+
+**🇮🇹 Italiano**
+
+- **Corretto lo spegnimento spontaneo dello schermo**: a volte il display si spegneva da solo mentre una scheda era ancora mostrata. La forzatura "resta acceso" (`ForcedNormal`) veniva applicata una sola volta, al momento in cui la scheda compariva — se qualche timeout nativo del citofono la annullava in seguito, nulla la riaffermava. Ora viene riasserita ad ogni ciclo del watcher (~1s) finche' la scheda resta effettivamente mostrata.
+- **Corretta la riaccensione incoerente dall'entita' luce**: riaccendendo la retroilluminazione da `light.retroilluminazione_display` dopo uno spegnimento spontaneo, a volte ricompariva la scheda giusta, altre la schermata di default del citofono — a seconda che lo standby nativo avesse silenziosamente sostituito la nostra scheda nel frattempo. L'entita' luce ora rileva questa situazione (retroilluminazione risultava spenta + una scheda risultava ancora "in mostra") e replica lo stesso resync software gia' usato da "mostra ora" (nascondi forzato, poi mostra di nuovo), cosi' il risultato e' sempre affidabile.
+- **Corretto `sensor.pagina_attiva` non aggiornato**: poteva restare bloccato sul nome dell'ultima scheda anche quando lo schermo era fisicamente spento (stesso spegnimento spontaneo di cui sopra, mai passato dal nostro "nascondi"). Ora incrocia lo stato riportato dal QML con la retroilluminazione reale letta dal sysfs: se questa e' per certo spenta, il sensore torna "idle" a prescindere da cosa pensi ancora il QML.
+- **Richiede una nuova installazione via SSH** (renderer QML aggiornato, versione 22).
+
+**🇬🇧 English**
+
+- **Fixed the screen turning itself off spontaneously**: sometimes the display would go blank on its own while a screen was still supposed to be shown. The "stay on" override (`ForcedNormal`) was applied only once, at the moment the screen appeared — if some native intercom timeout later cancelled it, nothing reasserted it. It's now reasserted on every watcher cycle (~1s) for as long as the screen is actually being shown.
+- **Fixed inconsistent behavior when turning the backlight back on from the light entity**: after a spontaneous screen-off, turning the backlight back on via `light.retroilluminazione_display` would sometimes bring back the right screen, other times the intercom's default menu — depending on whether native standby had silently replaced our screen in the meantime. The light entity now detects this situation (backlight was off + a screen was still supposedly showing) and replays the same software resync already used by "show now" (forced hide, then show again), so the result is always reliable.
+- **Fixed `sensor.pagina_attiva` not updating**: it could stay stuck on the last screen's name even when the display was physically off (same spontaneous screen-off as above, never went through our own "hide"). It now cross-checks the QML-reported state against the real backlight state read from sysfs: if that's definitely off, the sensor goes back to "idle" regardless of what the QML still believes.
+- **Requires a new SSH install** (updated QML renderer, version 22).
+
 ## 0.14.1
 
 **🇮🇹 Italiano**

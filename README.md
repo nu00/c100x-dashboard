@@ -167,9 +167,11 @@ under the same device:
 - **Intercom renderer** (`update.*`) — tracks whether the QML patch on the intercom matches the
   one shipped by this add-on version.
 - **Pagina attiva** (`sensor.*`) — which screen is actually showing on the physical display right
-  now (`idle` when the screen is free: home, closed via the side wheel, or interrupted by a real
-  call). Polled every 2s against a value the add-on already keeps in memory — pushed live by the
-  patched QML — so this has no extra impact on the intercom itself.
+  now (`idle` when the screen is free: home, closed via the side wheel, turned off by the
+  intercom's native standby, or interrupted by a real call). Polled every 2s against a value the
+  add-on already keeps in memory — pushed live by the patched QML and cross-checked against the
+  physical backlight read from sysfs, so it doesn't stay stuck on a screen name once the display
+  is truly off — so this has no extra impact on the intercom itself.
 - **Citofono occupato** (`binary_sensor.*`) — on while the intercom's camera is in use, for *any*
   reason: a real doorbell press, the WebRTC bundle, the BTicino app locally, or the BTicino app
   over LTE. Detected at the OpenWebNet bus level, not the network level, so it covers all of the

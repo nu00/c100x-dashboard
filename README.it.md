@@ -175,9 +175,12 @@ dispositivo:
 - **Intercom renderer** (`update.*`) — indica se la patch QML sul citofono corrisponde a quella
   distribuita da questa versione dell'add-on.
 - **Pagina attiva** (`sensor.*`) — quale scheda è davvero mostrata sul display fisico in questo
-  momento (`idle` quando lo schermo è libero: home, chiuso con la rotella laterale, o interrotto
-  da una chiamata reale). Interrogato ogni 2s su un valore che l'add-on tiene già in memoria —
-  aggiornato in tempo reale dalla patch QML — quindi nessun impatto aggiuntivo sul citofono.
+  momento (`idle` quando lo schermo è libero: home, chiuso con la rotella laterale, spento dallo
+  standby nativo del citofono, o interrotto da una chiamata reale). Interrogato ogni 2s su un
+  valore che l'add-on tiene già in memoria — aggiornato in tempo reale dalla patch QML e
+  incrociato con la retroilluminazione fisica letta dal sysfs, cosi' non resta bloccato sul nome
+  di una scheda quando lo schermo è davvero spento — quindi nessun impatto aggiuntivo sul
+  citofono.
 - **Citofono occupato** (`binary_sensor.*`) — attivo mentre la telecamera del citofono è in uso,
   per qualsiasi motivo: squillo reale, bundle WebRTC, app BTicino in locale o via LTE. Rilevato a
   livello di bus OpenWebNet, non di rete, quindi copre tutti i casi con lo stesso meccanismo.
