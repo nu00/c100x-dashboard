@@ -131,6 +131,14 @@ const BLOCK = `
                         // aggiorna anche quando una nuova scheda sostituisce quella
                         // gia' visibile (stesso showing=true, nome diverso).
                         if (schedaWatcher.showing) {
+                            // Riafferma ForcedNormal ad OGNI ciclo (non solo alla
+                            // transizione iniziale non-mostra->mostra): osservato che lo
+                            // schermo a volte si spegne da solo mentre una scheda e'
+                            // ancora "in mostra" secondo noi — segno che qualche timeout
+                            // nativo del citofono puo' annullare la forzatura una volta
+                            // sola fatta. Riasserirla ogni secondo la contrasta finche'
+                            // la scheda resta davvero visibile.
+                            global.screenState.enableState(ScreenState.ForcedNormal);
                             var curName = schedaWatcher.schedaData.name || "scheda";
                             if (curName !== schedaWatcher.lastReportedName) {
                                 schedaWatcher.lastReportedName = curName;

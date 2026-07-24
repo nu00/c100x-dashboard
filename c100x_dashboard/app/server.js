@@ -16,10 +16,10 @@ const { spawn } = require("child_process");
 
 const app = express();
 const PORT = 8099;
-const VERSION = "0.14.1";
+const VERSION = "0.15.0";
 // Versione del renderer lato citofono (SchedaPage.qml + blocco watcher).
 // Bumpare SOLO quando cambiano quei file, cosi\' l\'add-on sa se il citofono e\' da aggiornare.
-const RENDERER_VERSION = "21";
+const RENDERER_VERSION = "22";
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const HA_API = "http://supervisor/core/api";
@@ -601,7 +601,17 @@ app.post("/api/scheda-state", (req, res) => {
     }
 });
 
-app.get("/api/scheda-state", (req, res) => { res.json({ state: lastSchedaShown }); });
+app.get("/api/scheda-state", (req, res) => {
+    // Il display puo' spegnersi da solo (standby nativo del citofono) senza
+    // passare dal nostro "nascondi" — in quel caso lastSchedaShown resta
+    // bloccato sull'ultima scheda riportata dal QML, anche se a schermo non
+    // c'e' fisicamente nulla. Correggiamo qui incrociandolo con la
+    // retroilluminazione letta dal sysfs (ground truth, vedi piu' sotto): se
+    // e' per certo spenta, nulla e' realmente mostrato, a prescindere da cosa
+    // pensi ancora il QML.
+    const state = (backlightOn === false) ? "idle" : lastSchedaShown;
+    res.json({ state });
+});
 
 app.post("/api/show", async (req, res) => {
     const b = req.body || {};
@@ -1368,12 +1378,33 @@ app.post("/api/backlight-command", (req, res) => {
 // mostrata come effetto collaterale (osservato: "se spengo la
 // retroilluminazione dall'entita' light, muore il nostro QML"). L'entita'
 // luce deve poter accendere/spegnere/dimmerare senza toccare la scheda.
-app.post("/api/backlight-force", (req, res) => {
+app.post("/api/backlight-force", async (req, res) => {
     const b = req.body || {};
     if (b.on) {
         const level = (b.level !== undefined && b.level !== null) ? Math.max(1, Math.min(100, parseInt(b.level, 10) || 100)) : lastSetLevel;
         lastSetLevel = level;
         forceBacklightViaSysfs('on', level);
+
+        // Se il display era per certo spento MENTRE una scheda risultava ancora
+        // "in mostra" secondo l'ultimo report del QML, lo standby nativo del
+        // citofono ha quasi sicuramente sostituito la nostra scheda con quella di
+        // default senza passare dal nostro "nascondi" (altrimenti lastSchedaShown
+        // sarebbe gia' "idle" — vedi /api/scheda-state sopra). Riaccendere qui la
+        // sola retroilluminazione fisica (sysfs) non basta a far ricomparire la
+        // scheda giusta: osservato che a volte torna quella giusta, altre la
+        // schermata di default. Replichiamo lo stesso resync software gia' usato
+        // da /api/show (nascondi forzato, poi mostra di nuovo), cosi' riaccendere
+        // dall'entita' luce dia sempre lo stesso risultato affidabile.
+        if (backlightOn === false && lastSchedaShown && lastSchedaShown !== "idle") {
+            const a = await readActive();
+            if (a.name) {
+                a.hideSeq = Date.now();
+                await writeActive(a);
+                setTimeout(() => {
+                    readActive().then((a2) => { a2.showSeq = Date.now(); return writeActive(a2); }).catch(() => {});
+                }, 500);
+            }
+        }
     } else {
         forceBacklightViaSysfs('off');
     }
